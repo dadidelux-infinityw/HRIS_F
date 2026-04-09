@@ -1,16 +1,17 @@
 """
 Dashboard endpoints for statistics and overview
 """
-from fastapi import APIRouter, Depends, Query
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, Query, HTTPException
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, extract
 from typing import Dict, Any, List, Optional
-from datetime import datetime
+from datetime import datetime, date
 
 from app.db.database import get_db
 from app.models.user import User
 from app.models.job_posting import JobPosting, JobStatus
 from app.models.application import Application, ApplicationStatus, RecruitmentStage
+from app.models.interview import Interview, InterviewStatus
 from app.models.profile import Profile
 from app.core.dependencies import get_current_user, get_current_hr_or_admin
 
@@ -215,6 +216,151 @@ def get_analytics(
         "for_interview": for_interview,
         "positions_filled": positions_filled,
         "accepted_applicants": accepted_apps,
+    }
+
+
+@router.get("/candidate-summary")
+def get_candidate_summary(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+) -> Dict[str, Any]:
+    """
+    Get candidate-specific dashboard data in a single response.
+    Returns metrics, application progress, upcoming interview,
+    recommended jobs, and activity feed.
+    """
+    if current_user.role not in ("candidate",):
+        raise HTTPException(status_code=403, detail="Candidate access only")
+
+    # ── Fetch user's applications with related data ──
+    user_apps = db.query(Application).options(
+        joinedload(Application.job_posting),
+        joinedload(Application.interviews)
+    ).filter(Application.user_id == current_user.id).all()
+
+    # ── Metrics ──
+    non_withdrawn = [a for a in user_apps if a.status != ApplicationStatus.WITHDRAWN]
+    applied_jobs = len(non_withdrawn)
+    for_interview = len([a for a in non_withdrawn if a.recruitment_stage == RecruitmentStage.INTERVIEW.value])
+    under_review = len([a for a in non_withdrawn if a.status in (ApplicationStatus.PENDING, ApplicationStatus.IN_PROCESS)])
+    rejected = len([a for a in user_apps if a.status == ApplicationStatus.REJECTED])
+
+    # ── Application Progress ──
+    steps = ["Submitted", "Screening", "Interview", "Final Decision"]
+    stage_to_step = {
+        None: 0,
+        RecruitmentStage.INITIAL_SCREENING.value: 0,
+        RecruitmentStage.TEACHING_DEMO.value: 1,
+        RecruitmentStage.INTERVIEW.value: 2,
+        RecruitmentStage.FINAL_SELECTION.value: 3,
+        RecruitmentStage.JOB_OFFER.value: 3,
+        RecruitmentStage.ONBOARDING.value: 3,
+    }
+    active_apps = [a for a in non_withdrawn if a.status != ApplicationStatus.REJECTED]
+    current_step = 0
+    if active_apps:
+        current_step = max(stage_to_step.get(a.recruitment_stage, 0) for a in active_apps)
+
+    # ── Upcoming Interview ──
+    today = date.today()
+    upcoming = db.query(Interview).join(Application).filter(
+        Application.user_id == current_user.id,
+        Interview.status == InterviewStatus.SCHEDULED,
+        Interview.interview_date >= today
+    ).order_by(Interview.interview_date, Interview.interview_time).first()
+
+    upcoming_interview = None
+    if upcoming:
+        # Get the job title through the application
+        app_for_interview = db.query(Application).options(
+            joinedload(Application.job_posting)
+        ).filter(Application.id == upcoming.application_id).first()
+        upcoming_interview = {
+            "id": str(upcoming.id),
+            "job_title": app_for_interview.job_posting.job_title if app_for_interview and app_for_interview.job_posting else "Unknown",
+            "interview_date": upcoming.interview_date.isoformat(),
+            "interview_time": upcoming.interview_time.strftime("%H:%M"),
+            "location": upcoming.location,
+            "interview_type": upcoming.interview_type.value if upcoming.interview_type else "Video",
+        }
+
+    # ── Recommended Jobs ──
+    applied_job_ids = [a.job_posting_id for a in user_apps]
+    recommended_query = db.query(JobPosting).filter(
+        JobPosting.status == JobStatus.ACTIVE,
+        JobPosting.application_deadline >= today,
+    )
+    if applied_job_ids:
+        recommended_query = recommended_query.filter(JobPosting.id.notin_(applied_job_ids))
+    recommended = recommended_query.order_by(JobPosting.date_posted.desc()).limit(3).all()
+
+    recommended_jobs = [
+        {
+            "id": str(j.id),
+            "job_title": j.job_title,
+            "department": j.department,
+            "location": j.location,
+            "date_posted": j.date_posted.isoformat(),
+        }
+        for j in recommended
+    ]
+
+    # ── Activity Feed ──
+    feed_items = []
+    for app in user_apps:
+        job_title = app.job_posting.job_title if app.job_posting else "Unknown"
+        # Timeline events
+        for event in (app.timeline or []):
+            status = event.get("status", "")
+            timestamp = event.get("timestamp", "")
+            if status and timestamp:
+                message = f"Your application for {job_title} status changed to {status}"
+                if status == ApplicationStatus.PENDING.value:
+                    message = f"You applied for {job_title}"
+                elif status == ApplicationStatus.IN_PROCESS.value:
+                    message = f"Your application for {job_title} is under review"
+                elif status == ApplicationStatus.ACCEPTED.value:
+                    message = f"Your application for {job_title} has been accepted"
+                elif status == ApplicationStatus.REJECTED.value:
+                    message = f"Your application for {job_title} has been rejected"
+                feed_items.append({
+                    "type": "application_status",
+                    "message": message,
+                    "timestamp": timestamp,
+                    "job_title": job_title,
+                })
+        # Interview events
+        for interview in (app.interviews or []):
+            feed_items.append({
+                "type": "interview_scheduled",
+                "message": f"Interview scheduled for {job_title} on {interview.interview_date.isoformat()}",
+                "timestamp": interview.created_at.isoformat() if interview.created_at else "",
+                "job_title": job_title,
+            })
+
+    # Sort by timestamp descending, take top 10
+    feed_items.sort(key=lambda x: x["timestamp"], reverse=True)
+    feed_items = feed_items[:10]
+
+    return {
+        "metrics": {
+            "applied_jobs": applied_jobs,
+            "for_interview": for_interview,
+            "under_review": under_review,
+            "rejected": rejected,
+        },
+        "application_progress": {
+            "current_step": current_step,
+            "steps": steps,
+        },
+        "upcoming_interview": upcoming_interview,
+        "recommended_jobs": recommended_jobs,
+        "activity_feed": feed_items,
+        "user": {
+            "full_name": current_user.full_name,
+            "email": current_user.email,
+            "role": current_user.role,
+        },
     }
 
 

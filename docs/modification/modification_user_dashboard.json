@@ -1,0 +1,68 @@
+{
+    "document_details": {
+      "type": "Revision List [cite: 10]",
+      "platform": "HRIS [cite: 1]",
+      "user_greeting": "Good afternoon, Irene L. Balmes! [cite: 2]"
+    },
+    "ui_revisions": [
+      {
+        "revision_item": 1,
+        "instruction": "1. Remove and change into: [cite: 14]",
+        "updated_dashboard_metrics": [
+          {
+            "status": "Applied Jobs [cite: 25]",
+            "count": 3
+          },
+          {
+            "status": "For Interview [cite: 26]",
+            "count": 1
+          },
+          {
+            "status": "Under Review [cite: 27]",
+            "count": 2
+          },
+          {
+            "status": "Rejected [cite: 31]",
+            "count": 0
+          }
+        ]
+      },
+      {
+        "revision_item": 2,
+        "instruction": "2. Modified into: [cite: 32]",
+        "added_layout_components": [
+          "Application Progress (Submitted, Screening, Interview, Final Decision) [cite: 33, 34, 35, 45, 46]",
+          "Upcoming Interview [cite: 36]",
+          "Recommended Jobs for You [cite: 40]",
+          "Activity Feed [cite: 59]"
+        ]
+      }
+    ],
+    "typography_specifications": [
+      {
+        "element": "Page Title (\"Good afternoon...\") [cite: 81]",
+        "size": "24-28px [cite: 82]",
+        "weight": "Bold (600-700) [cite: 83]"
+      },
+      {
+        "element": "Section Titles (\"Job Categories\") [cite: 84]",
+        "size": "18-20px [cite: 85]",
+        "weight": "Semi-bold (600) [cite: 86]"
+      },
+      {
+        "element": "Card Titles (\"Engineering\") [cite: 87]",
+        "size": "16-18px [cite: 88]",
+        "weight": "Medium (500-600) [cite: 89]"
+      },
+      {
+        "element": "Body Text [cite: 90]",
+        "size": "14-16px [cite: 91]",
+        "weight": "Regular (400) [cite: 92]"
+      },
+      {
+        "element": "Small Labels [cite: 93]",
+        "size": "12-13px [cite: 94]",
+        "weight": "Light (300-400) [cite: 95]"
+      }
+    ]
+  }

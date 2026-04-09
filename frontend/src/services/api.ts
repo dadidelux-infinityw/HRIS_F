@@ -244,6 +244,52 @@ export interface InterviewUpdate {
   interviewer_name?: string;
 }
 
+// Candidate Dashboard types
+export interface CandidateMetrics {
+  applied_jobs: number;
+  for_interview: number;
+  under_review: number;
+  rejected: number;
+}
+
+export interface ApplicationProgress {
+  current_step: number;
+  steps: string[];
+}
+
+export interface UpcomingInterviewData {
+  id: string;
+  job_title: string;
+  interview_date: string;
+  interview_time: string;
+  location: string;
+  interview_type: string;
+}
+
+export interface RecommendedJob {
+  id: string;
+  job_title: string;
+  department: string;
+  location: string;
+  date_posted: string;
+}
+
+export interface ActivityItem {
+  type: 'application_status' | 'interview_scheduled' | 'application_submitted';
+  message: string;
+  timestamp: string;
+  job_title: string;
+}
+
+export interface CandidateDashboardData {
+  metrics: CandidateMetrics;
+  application_progress: ApplicationProgress;
+  upcoming_interview: UpcomingInterviewData | null;
+  recommended_jobs: RecommendedJob[];
+  activity_feed: ActivityItem[];
+  user: { full_name: string; email: string; role: string };
+}
+
 export interface CandidateMatchScore {
   total_score: number;   // 0-100
   semantic_score: number; // 0-1
@@ -358,6 +404,13 @@ class ApiService {
 
   async getJobCategories(): Promise<JobCategory[]> {
     const response = await fetch(`${this.baseUrl}/dashboard/categories`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse(response);
+  }
+
+  async getCandidateDashboard(): Promise<CandidateDashboardData> {
+    const response = await fetch(`${this.baseUrl}/dashboard/candidate-summary`, {
       headers: this.getAuthHeaders(),
     });
     return this.handleResponse(response);
