@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Filter, FileText, Eye } from 'lucide-react';
+import { Filter, FileText, Eye, Trash2 } from 'lucide-react';
 import { apiService, Application } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import ApplicationCard from '../components/applications/ApplicationCard';
@@ -75,6 +75,16 @@ const ApplicationsPage: React.FC = () => {
     const updated = await fetchApplications(false);
     const refreshed = updated.find((app) => app.id === id);
     if (refreshed) setSelectedApplication(refreshed);
+  };
+
+  const handleDeleteCandidate = async (userId: string, candidateName: string) => {
+    if (!confirm(`Are you sure you want to delete candidate "${candidateName}"? This will remove their account, profile, resume, and all applications. This action cannot be undone.`)) return;
+    try {
+      await apiService.deleteUser(userId);
+      await fetchApplications();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete candidate');
+    }
   };
 
   const formatDate = (dateString: string) =>
@@ -225,13 +235,25 @@ const ApplicationsPage: React.FC = () => {
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <button
-                        onClick={() => setSelectedApplication(application)}
-                        className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-xs font-medium"
-                      >
-                        <Eye size={14} />
-                        View
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setSelectedApplication(application)}
+                          className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-xs font-medium"
+                        >
+                          <Eye size={14} />
+                          View
+                        </button>
+                        {application.user?.id && application.user.id !== user?.id && (
+                          <button
+                            onClick={() => handleDeleteCandidate(application.user!.id, application.user!.full_name || 'Unknown')}
+                            className="flex items-center gap-1 px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-xs font-medium"
+                            title="Delete candidate"
+                          >
+                            <Trash2 size={14} />
+                            Delete
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

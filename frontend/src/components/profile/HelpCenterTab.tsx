@@ -75,12 +75,12 @@ const HelpCenterTab: React.FC = () => {
     <div className="max-w-3xl">
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-4">
-          <div className="p-3 bg-blue-100 text-blue-600 rounded-lg">
-            <HelpCircle size={24} />
+          <div className="p-3 rounded-2xl app-icon-chip-active">
+            <HelpCircle size={22} strokeWidth={1.9} />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">Help Center</h3>
-            <p className="text-sm text-gray-600">
+            <h3 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>Help Center</h3>
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
               Find answers to frequently asked questions
             </p>
           </div>
@@ -89,7 +89,8 @@ const HelpCenterTab: React.FC = () => {
         {/* Search */}
         <div className="relative">
           <Search
-            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+            className="absolute left-3 top-1/2 transform -translate-y-1/2"
+            style={{ color: 'var(--text-muted)' }}
             size={20}
           />
           <input
@@ -97,7 +98,7 @@ const HelpCenterTab: React.FC = () => {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search for help..."
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full pl-10 pr-4 py-2 rounded-xl themed-input"
           />
         </div>
       </div>
@@ -111,7 +112,7 @@ const HelpCenterTab: React.FC = () => {
 
           return (
             <div key={category}>
-              <h4 className="text-md font-semibold text-gray-900 mb-3">{category}</h4>
+              <h4 className="text-md font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>{category}</h4>
               <div className="space-y-2">
                 {categoryFAQs.map((faq) => {
                   const globalIndex = faqs.indexOf(faq);
@@ -120,25 +121,28 @@ const HelpCenterTab: React.FC = () => {
                   return (
                     <div
                       key={globalIndex}
-                      className="bg-white border border-gray-200 rounded-lg overflow-hidden"
+                      className="rounded-xl overflow-hidden"
+                      style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)' }}
                     >
                       <button
+                        type="button"
                         onClick={() =>
                           setExpandedIndex(isExpanded ? null : globalIndex)
                         }
-                        className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 transition-colors"
+                        className="w-full flex items-center justify-between p-4 text-left transition-colors"
+                        style={{ backgroundColor: isExpanded ? 'var(--bg-hover)' : 'transparent' }}
                       >
-                        <span className="font-medium text-gray-900">
+                        <span className="font-medium" style={{ color: 'var(--text-primary)' }}>
                           {faq.question}
                         </span>
                         {isExpanded ? (
-                          <ChevronUp className="text-gray-400 flex-shrink-0" size={20} />
+                          <ChevronUp className="flex-shrink-0" style={{ color: 'var(--text-muted)' }} size={20} />
                         ) : (
-                          <ChevronDown className="text-gray-400 flex-shrink-0" size={20} />
+                          <ChevronDown className="flex-shrink-0" style={{ color: 'var(--text-muted)' }} size={20} />
                         )}
                       </button>
                       {isExpanded && (
-                        <div className="px-4 pb-4 text-gray-600 border-t border-gray-100 pt-4">
+                        <div className="px-4 pb-4 border-t pt-4" style={{ color: 'var(--text-secondary)', borderColor: 'var(--border-light)' }}>
                           {faq.answer}
                         </div>
                       )}
@@ -152,9 +156,9 @@ const HelpCenterTab: React.FC = () => {
 
         {filteredFAQs.length === 0 && (
           <div className="text-center py-12">
-            <HelpCircle className="mx-auto mb-4 text-gray-400" size={48} />
-            <p className="text-gray-600">No results found for "{searchTerm}"</p>
-            <p className="text-sm text-gray-500 mt-2">
+            <HelpCircle className="mx-auto mb-4" style={{ color: 'var(--text-muted)' }} size={48} />
+            <p style={{ color: 'var(--text-secondary)' }}>No results found for "{searchTerm}"</p>
+            <p className="text-sm mt-2" style={{ color: 'var(--text-muted)' }}>
               Try searching with different keywords
             </p>
           </div>

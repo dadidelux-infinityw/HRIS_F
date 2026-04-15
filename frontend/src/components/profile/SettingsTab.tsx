@@ -55,14 +55,17 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ onChangePassword }) => {
 
   return (
     <div className="max-w-2xl">
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
+      <div
+        className="rounded-2xl border p-6"
+        style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)', boxShadow: 'var(--shadow)' }}
+      >
         <div className="flex items-center gap-3 mb-6">
-          <div className="p-3 bg-blue-100 text-blue-600 rounded-lg">
-            <Lock size={24} />
+          <div className="p-3 rounded-2xl app-icon-chip-active">
+            <Lock size={22} strokeWidth={1.9} />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">Change Password</h3>
-            <p className="text-sm text-gray-600">
+            <h3 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>Change Password</h3>
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
               Update your password to keep your account secure
             </p>
           </div>
@@ -84,7 +87,7 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ onChangePassword }) => {
         <form onSubmit={handleSubmit}>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
                 Current Password
               </label>
               <input
@@ -94,13 +97,13 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ onChangePassword }) => {
                   setPasswordData({ ...passwordData, current_password: e.target.value })
                 }
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 rounded-xl themed-input"
                 placeholder="Enter current password"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
                 New Password
               </label>
               <input
@@ -110,16 +113,16 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ onChangePassword }) => {
                   setPasswordData({ ...passwordData, new_password: e.target.value })
                 }
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 rounded-xl themed-input"
                 placeholder="Enter new password"
               />
-              <p className="mt-1 text-sm text-gray-500">
+              <p className="mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>
                 Must be at least 6 characters long
               </p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
                 Confirm New Password
               </label>
               <input
@@ -129,7 +132,7 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ onChangePassword }) => {
                   setPasswordData({ ...passwordData, confirm_password: e.target.value })
                 }
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 rounded-xl themed-input"
                 placeholder="Confirm new password"
               />
             </div>
@@ -139,7 +142,8 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ onChangePassword }) => {
             <button
               type="submit"
               disabled={loading}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              className="px-6 py-2 text-white rounded-xl disabled:opacity-50"
+              style={{ backgroundColor: 'var(--accent)' }}
             >
               {loading ? 'Changing Password...' : 'Change Password'}
             </button>
@@ -148,9 +152,12 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ onChangePassword }) => {
       </div>
 
       {/* Additional Settings Placeholder */}
-      <div className="mt-6 bg-white rounded-lg border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Notifications</h3>
-        <p className="text-gray-600 text-sm mb-4">
+      <div
+        className="mt-6 rounded-2xl border p-6"
+        style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)', boxShadow: 'var(--shadow)' }}
+      >
+        <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Notifications</h3>
+        <p className="text-sm mb-4" style={{ color: 'var(--text-muted)' }}>
           Notification preferences will be available in a future update.
         </p>
       </div>

@@ -58,8 +58,10 @@ const RecruitmentPhasesSection: React.FC<Props> = ({ phases }) => {
   };
 
   return (
-    <div className="mb-8">
-      <h2 className="text-xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>
+    <div
+      className="rounded-3xl p-6 dashboard-card"
+    >
+      <h2 className="text-xl font-bold mb-5" style={{ color: 'var(--text-primary)' }}>
         Recruitment Pipeline
       </h2>
 

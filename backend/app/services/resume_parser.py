@@ -4,10 +4,12 @@ Adapted from resume_builder/src/gemini_pipeline.py
 """
 import json
 import logging
+import re
 from typing import Dict, Any, Tuple, List
 from io import BytesIO
 
 from google import genai
+from google.genai import types
 from pypdf import PdfReader
 
 from app.core.config import settings
@@ -133,17 +135,22 @@ class ResumeParserService:
 
             response = self.client.models.generate_content(
                 model=MODEL_NAME,
-                contents=prompt
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    temperature=0.1,
+                ),
             )
 
-            # Clean response text - remove markdown code blocks if present
-            response_text = response.text
+            response_text = (response.text or "").strip()
             response_text = response_text.replace('```json', '').replace('```', '').strip()
 
-            # Parse JSON
-            parsed_data = json.loads(response_text)
-
-            return parsed_data
+            try:
+                return json.loads(response_text)
+            except json.JSONDecodeError:
+                # Fallback: strip trailing commas that Gemini occasionally emits
+                cleaned = re.sub(r',(\s*[}\]])', r'\1', response_text)
+                return json.loads(cleaned)
 
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse Gemini response as JSON: {str(e)}")

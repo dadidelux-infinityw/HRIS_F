@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { FileText, Upload, Download, Trash2, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { apiService } from '../../services/api';
 
@@ -10,7 +10,11 @@ interface ResumeData {
   uploaded_at: string;
 }
 
-const ResumeTab: React.FC = () => {
+interface ResumeTabProps {
+  onProfileChanged?: () => Promise<void>;
+}
+
+const ResumeTab: React.FC<ResumeTabProps> = ({ onProfileChanged }) => {
   const [resume, setResume] = useState<ResumeData | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -55,6 +59,8 @@ const ResumeTab: React.FC = () => {
       const result = await apiService.uploadResume(file);
       setResume(result);
       setSuccess(result.message || 'Resume uploaded successfully!');
+      // Refresh profile so skills list stays in sync
+      if (onProfileChanged) await onProfileChanged();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to upload resume');
     } finally {
@@ -74,9 +80,11 @@ const ResumeTab: React.FC = () => {
   const handleDelete = async () => {
     if (!confirm('Are you sure you want to delete your resume?')) return;
     try {
-      await apiService.deleteResume();
+      const result = await apiService.deleteResume();
       setResume(null);
-      setSuccess('Resume deleted successfully');
+      setSuccess(result.message || 'Resume deleted successfully');
+      // Refresh profile so resume-sourced skills are removed from display
+      if (onProfileChanged) await onProfileChanged();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete resume');
     }
@@ -91,8 +99,8 @@ const ResumeTab: React.FC = () => {
   return (
     <div className="max-w-2xl">
       <div className="mb-6">
-        <h2 className="text-lg font-semibold text-gray-900">Resume / CV</h2>
-        <p className="text-sm text-gray-500 mt-1">
+        <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>Resume / CV</h2>
+        <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
           Upload your resume as a PDF. Skills will be extracted automatically using AI.
         </p>
       </div>
@@ -112,21 +120,24 @@ const ResumeTab: React.FC = () => {
       )}
 
       {loading ? (
-        <div className="flex items-center gap-2 text-gray-500">
+        <div className="flex items-center gap-2" style={{ color: 'var(--text-muted)' }}>
           <Loader2 size={16} className="animate-spin" />
           Loading...
         </div>
       ) : resume ? (
         <div className="space-y-4">
-          <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-gray-200">
+          <div
+            className="flex items-center justify-between p-4 rounded-2xl border"
+            style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)', boxShadow: 'var(--shadow)' }}
+          >
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <FileText size={24} className="text-blue-600" />
+              <div className="p-2 rounded-xl app-icon-chip-active">
+                <FileText size={22} strokeWidth={1.9} />
               </div>
               <div>
-                <p className="font-medium text-gray-900">{resume.filename}</p>
-                <p className="text-sm text-gray-500">
-                  {formatFileSize(resume.file_size)} • Uploaded {new Date(resume.uploaded_at).toLocaleDateString()}
+                <p className="font-medium" style={{ color: 'var(--text-primary)' }}>{resume.filename}</p>
+                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                  {formatFileSize(resume.file_size)} · Uploaded {new Date(resume.uploaded_at).toLocaleDateString()}
                 </p>
                 <p className="text-xs mt-1">
                   {resume.parsing_status === 'completed' && (
@@ -147,15 +158,19 @@ const ResumeTab: React.FC = () => {
             </div>
             <div className="flex items-center gap-2">
               <button
+                type="button"
                 onClick={handleDownload}
-                className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                className="p-2 rounded-lg transition-colors"
+                style={{ color: 'var(--text-muted)' }}
                 title="Download"
               >
                 <Download size={18} />
               </button>
               <button
+                type="button"
                 onClick={handleDelete}
-                className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                className="p-2 rounded-lg transition-colors"
+                style={{ color: 'var(--text-muted)' }}
                 title="Delete"
               >
                 <Trash2 size={18} />
@@ -171,9 +186,11 @@ const ResumeTab: React.FC = () => {
             className="hidden"
           />
           <button
+            type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
-            className="text-sm text-blue-600 hover:text-blue-700 font-medium disabled:opacity-50"
+            className="text-sm font-medium disabled:opacity-50"
+            style={{ color: 'var(--accent)' }}
           >
             {uploading ? 'Uploading...' : 'Replace with new resume'}
           </button>
@@ -189,21 +206,22 @@ const ResumeTab: React.FC = () => {
           />
           <div
             onClick={() => !uploading && fileInputRef.current?.click()}
-            className={`border-2 border-dashed border-gray-300 rounded-lg p-10 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/50 transition-colors ${
+            className={`border-2 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-colors ${
               uploading ? 'opacity-50 cursor-not-allowed' : ''
             }`}
+            style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}
           >
             {uploading ? (
               <div className="flex flex-col items-center gap-2">
-                <Loader2 size={32} className="text-blue-600 animate-spin" />
-                <p className="text-gray-600">Uploading and parsing resume...</p>
+                <Loader2 size={32} className="animate-spin" style={{ color: 'var(--accent)' }} />
+                <p style={{ color: 'var(--text-secondary)' }}>Uploading and parsing resume...</p>
               </div>
             ) : (
               <>
-                <Upload size={36} className="mx-auto text-gray-400 mb-3" />
-                <p className="text-gray-700 font-medium">Click to upload your resume</p>
-                <p className="text-sm text-gray-500 mt-1">PDF files only, max 10MB</p>
-                <p className="text-xs text-gray-400 mt-2">
+                <Upload size={36} className="mx-auto mb-3" style={{ color: 'var(--text-muted)' }} />
+                <p className="font-medium" style={{ color: 'var(--text-secondary)' }}>Click to upload your resume</p>
+                <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>PDF files only, max 10MB</p>
+                <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>
                   Skills will be extracted automatically using AI
                 </p>
               </>

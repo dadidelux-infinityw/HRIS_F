@@ -100,6 +100,7 @@ export interface Profile {
   user_id: string;
   bio?: string;
   skills: string[];
+  resume_skills: string[];
   phone?: string;
   address?: string;
   documents: DocumentInfo[];
@@ -250,6 +251,14 @@ export interface CandidateMetrics {
   for_interview: number;
   under_review: number;
   rejected: number;
+  accepted: number;
+}
+
+export interface TopRecommendation {
+  job_id: string;
+  job_title: string;
+  department: string;
+  match_score: number;
 }
 
 export interface ApplicationProgress {
@@ -286,6 +295,7 @@ export interface CandidateDashboardData {
   application_progress: ApplicationProgress;
   upcoming_interview: UpcomingInterviewData | null;
   recommended_jobs: RecommendedJob[];
+  top_recommendation: TopRecommendation | null;
   activity_feed: ActivityItem[];
   user: { full_name: string; email: string; role: string };
 }
@@ -325,6 +335,74 @@ export interface CacheDeleteResponse {
   job_id: string;
   entries_deleted: number;
   message: string;
+}
+
+// HR Insights types
+export interface TopCandidate {
+  user_id: string;
+  full_name: string;
+  email: string;
+  match_score: number;
+  semantic_score: number;
+  keyword_score: number;
+  skills_matched: string[];
+  total_skills: number;
+}
+
+export interface TopCandidatesResponse {
+  job_id: string;
+  job_title: string;
+  requirements: string[];
+  total_candidates_scored: number;
+  top_candidates: TopCandidate[];
+}
+
+export interface InsightFlag {
+  type: string;
+  severity: 'warning' | 'info' | 'success';
+  message: string;
+  candidate_name?: string;
+  job_title?: string;
+  match_score?: number;
+  missing_items?: string[];
+  count?: number;
+}
+
+export interface InsightFlagsResponse {
+  flags: InsightFlag[];
+  total_flags: number;
+}
+
+export interface ExperienceBucket {
+  level: string;
+  count: number;
+}
+
+export interface ExperienceDistributionResponse {
+  distribution: ExperienceBucket[];
+  total_candidates: number;
+  details: { user_id: string; full_name: string; years_experience: number; bucket: string }[];
+}
+
+export interface EducationBucket {
+  level: string;
+  count: number;
+}
+
+export interface EducationDistributionResponse {
+  distribution: EducationBucket[];
+  total_candidates: number;
+  details: { user_id: string; full_name: string; education_level: string }[];
+}
+
+export interface FunnelStep {
+  stage: string;
+  count: number;
+}
+
+export interface HiringFunnelResponse {
+  funnel: FunnelStep[];
+  conversion_rates: Record<string, number>;
 }
 
 class ApiService {
@@ -756,6 +834,59 @@ class ApiService {
 
   async clearEmbeddingCache(jobId: string): Promise<CacheDeleteResponse> {
     const response = await fetch(`${this.baseUrl}/matching/cache/${jobId}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse(response);
+  }
+
+  // HR Insights methods (admin/HR only)
+  async getTopCandidates(jobId: string, limit = 3): Promise<TopCandidatesResponse> {
+    const response = await fetch(
+      `${this.baseUrl}/dashboard/insights/top-candidates?job_id=${jobId}&limit=${limit}`,
+      { headers: this.getAuthHeaders() }
+    );
+    return this.handleResponse(response);
+  }
+
+  async getInsightFlags(): Promise<InsightFlagsResponse> {
+    const response = await fetch(`${this.baseUrl}/dashboard/insights/flags`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse(response);
+  }
+
+  async getExperienceDistribution(): Promise<ExperienceDistributionResponse> {
+    const response = await fetch(`${this.baseUrl}/dashboard/insights/experience-distribution`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse(response);
+  }
+
+  async getEducationDistribution(): Promise<EducationDistributionResponse> {
+    const response = await fetch(`${this.baseUrl}/dashboard/insights/education-distribution`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse(response);
+  }
+
+  async getHiringFunnel(): Promise<HiringFunnelResponse> {
+    const response = await fetch(`${this.baseUrl}/dashboard/insights/hiring-funnel`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse(response);
+  }
+
+  // User management methods (HR/Admin)
+  async getAllUsers(): Promise<User[]> {
+    const response = await fetch(`${this.baseUrl}/users/`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse(response);
+  }
+
+  async deleteUser(userId: string): Promise<void> {
+    const response = await fetch(`${this.baseUrl}/users/${userId}`, {
       method: 'DELETE',
       headers: this.getAuthHeaders(),
     });

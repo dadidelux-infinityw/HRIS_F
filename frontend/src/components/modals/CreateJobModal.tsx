@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, ChevronRight, ChevronLeft } from 'lucide-react';
+import { X, ChevronRight, ChevronLeft, Check } from 'lucide-react';
 import { CreateJobPostingData } from '../../types';
 
 interface CreateJobModalProps {
@@ -7,6 +7,16 @@ interface CreateJobModalProps {
   onClose: () => void;
   onCreate: (data: CreateJobPostingData) => void;
 }
+
+const steps = [
+  'Basic Information',
+  'Job Description',
+  'Requirements & Responsibilities',
+  'Application Details',
+];
+
+const inputClassName = 'themed-input w-full rounded-2xl px-4 py-3 text-sm';
+const labelClassName = 'block text-sm font-semibold mb-2';
 
 const CreateJobModal: React.FC<CreateJobModalProps> = ({
   isOpen,
@@ -33,7 +43,11 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     if (stepErrors[name]) {
-      setStepErrors((prev) => { const next = { ...prev }; delete next[name]; return next; });
+      setStepErrors((prev) => {
+        const next = { ...prev };
+        delete next[name];
+        return next;
+      });
     }
   };
 
@@ -68,24 +82,45 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
 
   const validateCurrentStep = (): boolean => {
     const errors: Record<string, string> = {};
+
     if (currentStep === 1) {
-      if (!formData.jobTitle.trim()) errors.jobTitle = 'Job Title is required.';
+      if (!formData.jobTitle.trim()) errors.jobTitle = 'Job title is required.';
       if (!formData.department.trim()) errors.department = 'Department is required.';
       if (!formData.location.trim()) errors.location = 'Location is required.';
-    } else if (currentStep === 2) {
-      if (!formData.description.trim()) errors.description = 'Job Description is required.';
+    } else if (currentStep === 2 && !formData.description.trim()) {
+      errors.description = 'Job description is required.';
     }
+
     setStepErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
   const handleNext = () => {
     if (!validateCurrentStep()) return;
-    if (currentStep < 4) setCurrentStep(currentStep + 1);
+    if (currentStep < 4) setCurrentStep((prev) => prev + 1);
   };
 
   const handlePrevious = () => {
-    if (currentStep > 1) setCurrentStep(currentStep - 1);
+    if (currentStep > 1) setCurrentStep((prev) => prev - 1);
+  };
+
+  const resetModal = () => {
+    setCurrentStep(1);
+    setStepErrors({});
+    setFormData({
+      jobTitle: '',
+      department: '',
+      location: '',
+      description: '',
+      requirements: [''],
+      responsibilities: [''],
+      applicationDeadline: '',
+    });
+  };
+
+  const handleClose = () => {
+    resetModal();
+    onClose();
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -99,84 +134,67 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
     handleClose();
   };
 
-  const handleClose = () => {
-    setCurrentStep(1);
-    setStepErrors({});
-    setFormData({
-      jobTitle: '',
-      department: '',
-      location: '',
-      description: '',
-      requirements: [''],
-      responsibilities: [''],
-      applicationDeadline: '',
-    });
-    onClose();
-  };
+  const cardStyle = {
+    backgroundColor: 'var(--bg-tertiary)',
+    border: '1px solid var(--border)',
+  } as const;
 
-  const steps = [
-    'Basic Information',
-    'Job Description',
-    'Requirements & Responsibilities',
-    'Application Details',
-  ];
+  const renderError = (key: string) =>
+    stepErrors[key] ? <p className="text-red-400 text-xs mt-2">{stepErrors[key]}</p> : null;
 
   return (
     <div className="modal-overlay" onClick={handleClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        {/* Header */}
-        <div className="flex justify-between items-center p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">
-            Create Job Posting
-          </h2>
+      <div className="modal-content job-modal-shell" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-start justify-between gap-4 px-8 py-6 border-b" style={{ borderColor: 'var(--border)' }}>
+          <div>
+            <h2 className="text-[28px] font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
+              Create Job Posting
+            </h2>
+            <p className="mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>
+              Create a polished role listing with guided steps.
+            </p>
+          </div>
           <button
+            type="button"
             onClick={handleClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="job-modal-close h-11 w-11 rounded-2xl flex items-center justify-center transition-colors"
           >
-            <X size={24} />
+            <X size={22} />
           </button>
         </div>
 
-        {/* Step Indicator */}
-        <div className="px-6 pt-6">
-          <div className="flex justify-between items-center mb-8">
-            {steps.map((step, index) => (
-              <div key={index} className="flex items-center flex-1">
-                <div className="flex flex-col items-center flex-1">
-                  <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm ${
-                      currentStep > index + 1
-                        ? 'bg-green-500 text-white'
-                        : currentStep === index + 1
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-200 text-gray-500'
-                    }`}
-                  >
-                    {currentStep > index + 1 ? '✓' : index + 1}
+        <div className="px-8 pt-7">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+            {steps.map((step, index) => {
+              const stepNumber = index + 1;
+              const isActive = currentStep === stepNumber;
+              const isComplete = currentStep > stepNumber;
+
+              return (
+                <div key={step} className="job-step-card rounded-3xl p-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`job-step-badge ${isActive ? 'active' : ''} ${isComplete ? 'complete' : ''}`}>
+                      {isComplete ? <Check size={16} strokeWidth={2.6} /> : stepNumber}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[11px] uppercase tracking-[0.16em] font-semibold" style={{ color: 'var(--text-muted)' }}>
+                        Step {stepNumber}
+                      </p>
+                      <p className="text-sm font-semibold leading-5 mt-1" style={{ color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
+                        {step}
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-xs text-gray-600 mt-2 text-center">
-                    {step}
-                  </p>
                 </div>
-                {index < steps.length - 1 && (
-                  <div
-                    className={`h-0.5 flex-1 mx-2 ${
-                      currentStep > index + 1 ? 'bg-green-500' : 'bg-gray-200'
-                    }`}
-                  />
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit}>
-          <div className="px-6 pb-6 min-h-[300px]">
-            {/* Step 1: Basic Information */}
+          <div className="px-8 py-8 min-h-[360px]">
             {currentStep === 1 && (
-              <div className="space-y-4">
-                {/* Datalist options */}
+              <div className="space-y-5">
                 <datalist id="jobTitleOptions">
                   <option value="Software Engineer" />
                   <option value="Senior Software Engineer" />
@@ -232,7 +250,7 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
                 </datalist>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className={labelClassName} style={{ color: 'var(--text-secondary)' }}>
                     Job Title <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -242,13 +260,13 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
                     value={formData.jobTitle}
                     onChange={handleChange}
                     placeholder="Select or type a job title"
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${stepErrors.jobTitle ? 'border-red-500' : 'border-gray-300'}`}
+                    className={`${inputClassName} ${stepErrors.jobTitle ? 'border-red-500' : ''}`}
                   />
-                  {stepErrors.jobTitle && <p className="text-red-500 text-xs mt-1">{stepErrors.jobTitle}</p>}
+                  {renderError('jobTitle')}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className={labelClassName} style={{ color: 'var(--text-secondary)' }}>
                     Department <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -258,13 +276,13 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
                     value={formData.department}
                     onChange={handleChange}
                     placeholder="Select or type a department"
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${stepErrors.department ? 'border-red-500' : 'border-gray-300'}`}
+                    className={`${inputClassName} ${stepErrors.department ? 'border-red-500' : ''}`}
                   />
-                  {stepErrors.department && <p className="text-red-500 text-xs mt-1">{stepErrors.department}</p>}
+                  {renderError('department')}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className={labelClassName} style={{ color: 'var(--text-secondary)' }}>
                     Location <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -274,56 +292,51 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
                     value={formData.location}
                     onChange={handleChange}
                     placeholder="Select or type a location"
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${stepErrors.location ? 'border-red-500' : 'border-gray-300'}`}
+                    className={`${inputClassName} ${stepErrors.location ? 'border-red-500' : ''}`}
                   />
-                  {stepErrors.location && <p className="text-red-500 text-xs mt-1">{stepErrors.location}</p>}
+                  {renderError('location')}
                 </div>
               </div>
             )}
 
-            {/* Step 2: Job Description */}
             {currentStep === 2 && (
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Job Description <span className="text-red-500">*</span>
-                  </label>
-                  <textarea
-                    name="description"
-                    value={formData.description}
-                    onChange={handleChange}
-                    rows={8}
-                    placeholder="Enter a detailed description of the job position..."
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${stepErrors.description ? 'border-red-500' : 'border-gray-300'}`}
-                  />
-                  {stepErrors.description && <p className="text-red-500 text-xs mt-1">{stepErrors.description}</p>}
-                </div>
+              <div>
+                <label className={labelClassName} style={{ color: 'var(--text-secondary)' }}>
+                  Job Description <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  name="description"
+                  value={formData.description}
+                  onChange={handleChange}
+                  rows={8}
+                  placeholder="Describe the role, team goals, and the impact this hire will make."
+                  className={`${inputClassName} min-h-[240px] resize-none ${stepErrors.description ? 'border-red-500' : ''}`}
+                />
+                {renderError('description')}
               </div>
             )}
 
-            {/* Step 3: Requirements & Responsibilities */}
             {currentStep === 3 && (
               <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                <div className="rounded-3xl p-5" style={cardStyle}>
+                  <label className={labelClassName} style={{ color: 'var(--text-secondary)' }}>
                     Requirements & Qualifications
                   </label>
                   {formData.requirements.map((req, index) => (
-                    <div key={index} className="flex gap-2 mb-2">
+                    <div key={`req-${index}`} className="flex gap-3 mb-3">
                       <input
                         type="text"
                         value={req}
-                        onChange={(e) =>
-                          handleArrayChange('requirements', index, e.target.value)
-                        }
+                        onChange={(e) => handleArrayChange('requirements', index, e.target.value)}
                         placeholder={`Requirement ${index + 1}`}
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className={`${inputClassName} flex-1`}
                       />
                       {formData.requirements.length > 1 && (
                         <button
                           type="button"
                           onClick={() => removeArrayItem('requirements', index)}
-                          className="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg"
+                          className="rounded-2xl px-4 py-3 text-sm font-medium transition-colors"
+                          style={{ backgroundColor: 'rgba(239, 68, 68, 0.12)', color: '#f87171' }}
                         >
                           Remove
                         </button>
@@ -333,38 +346,32 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
                   <button
                     type="button"
                     onClick={() => addArrayItem('requirements')}
-                    className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                    className="mt-2 text-sm font-semibold"
+                    style={{ color: 'var(--accent)' }}
                   >
                     + Add Requirement
                   </button>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                <div className="rounded-3xl p-5" style={cardStyle}>
+                  <label className={labelClassName} style={{ color: 'var(--text-secondary)' }}>
                     Responsibilities
                   </label>
                   {formData.responsibilities.map((resp, index) => (
-                    <div key={index} className="flex gap-2 mb-2">
+                    <div key={`resp-${index}`} className="flex gap-3 mb-3">
                       <input
                         type="text"
                         value={resp}
-                        onChange={(e) =>
-                          handleArrayChange(
-                            'responsibilities',
-                            index,
-                            e.target.value
-                          )
-                        }
+                        onChange={(e) => handleArrayChange('responsibilities', index, e.target.value)}
                         placeholder={`Responsibility ${index + 1}`}
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className={`${inputClassName} flex-1`}
                       />
                       {formData.responsibilities.length > 1 && (
                         <button
                           type="button"
-                          onClick={() =>
-                            removeArrayItem('responsibilities', index)
-                          }
-                          className="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg"
+                          onClick={() => removeArrayItem('responsibilities', index)}
+                          className="rounded-2xl px-4 py-3 text-sm font-medium transition-colors"
+                          style={{ backgroundColor: 'rgba(239, 68, 68, 0.12)', color: '#f87171' }}
                         >
                           Remove
                         </button>
@@ -374,7 +381,8 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
                   <button
                     type="button"
                     onClick={() => addArrayItem('responsibilities')}
-                    className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                    className="mt-2 text-sm font-semibold"
+                    style={{ color: 'var(--accent)' }}
                   >
                     + Add Responsibility
                   </button>
@@ -382,11 +390,10 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
               </div>
             )}
 
-            {/* Step 4: Application Details */}
             {currentStep === 4 && (
-              <div className="space-y-4">
+              <div className="space-y-5">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className={labelClassName} style={{ color: 'var(--text-secondary)' }}>
                     Application Deadline <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -394,30 +401,27 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
                     name="applicationDeadline"
                     value={formData.applicationDeadline}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className={inputClassName}
                     required
                   />
                 </div>
 
-                {/* Summary */}
-                <div className="mt-6 bg-gray-50 rounded-lg p-4">
-                  <h3 className="font-semibold text-gray-900 mb-3">Summary</h3>
+                <div className="rounded-3xl p-5" style={cardStyle}>
+                  <h3 className="font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>
+                    Summary
+                  </h3>
                   <div className="space-y-2 text-sm">
-                    <p>
-                      <span className="font-medium">Job Title:</span>{' '}
-                      {formData.jobTitle || 'Not set'}
+                    <p style={{ color: 'var(--text-secondary)' }}>
+                      <span className="font-medium" style={{ color: 'var(--text-primary)' }}>Job Title:</span> {formData.jobTitle || 'Not set'}
                     </p>
-                    <p>
-                      <span className="font-medium">Department:</span>{' '}
-                      {formData.department || 'Not set'}
+                    <p style={{ color: 'var(--text-secondary)' }}>
+                      <span className="font-medium" style={{ color: 'var(--text-primary)' }}>Department:</span> {formData.department || 'Not set'}
                     </p>
-                    <p>
-                      <span className="font-medium">Location:</span>{' '}
-                      {formData.location || 'Not set'}
+                    <p style={{ color: 'var(--text-secondary)' }}>
+                      <span className="font-medium" style={{ color: 'var(--text-primary)' }}>Location:</span> {formData.location || 'Not set'}
                     </p>
-                    <p>
-                      <span className="font-medium">Deadline:</span>{' '}
-                      {formData.applicationDeadline || 'Not set'}
+                    <p style={{ color: 'var(--text-secondary)' }}>
+                      <span className="font-medium" style={{ color: 'var(--text-primary)' }}>Deadline:</span> {formData.applicationDeadline || 'Not set'}
                     </p>
                   </div>
                 </div>
@@ -425,41 +429,33 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
             )}
           </div>
 
-          {/* Footer */}
-          <div className="flex justify-between items-center p-6 border-t border-gray-200">
+          <div className="flex justify-between items-center px-8 py-6 border-t" style={{ borderColor: 'var(--border)' }}>
             <button
               type="button"
               onClick={handlePrevious}
               disabled={currentStep === 1}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                currentStep === 1
-                  ? 'text-gray-400 cursor-not-allowed'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
+              className={`flex items-center gap-2 px-4 py-3 rounded-2xl transition-colors ${currentStep === 1 ? 'opacity-40 cursor-not-allowed' : ''}`}
+              style={{
+                color: currentStep === 1 ? 'var(--text-muted)' : 'var(--text-secondary)',
+                backgroundColor: currentStep === 1 ? 'transparent' : 'var(--bg-tertiary)',
+                border: currentStep === 1 ? '1px solid transparent' : '1px solid var(--border)',
+              }}
             >
-              <ChevronLeft size={20} />
+              <ChevronLeft size={18} />
               Previous
             </button>
 
             <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={handleClose}
-                className="btn-secondary"
-              >
+              <button type="button" onClick={handleClose} className="btn-secondary rounded-2xl">
                 Cancel
               </button>
               {currentStep < 4 ? (
-                <button
-                  type="button"
-                  onClick={handleNext}
-                  className="btn-primary flex items-center gap-2"
-                >
+                <button type="button" onClick={handleNext} className="btn-primary flex items-center gap-2 rounded-2xl">
                   Next
-                  <ChevronRight size={20} />
+                  <ChevronRight size={18} />
                 </button>
               ) : (
-                <button type="submit" className="btn-primary">
+                <button type="submit" className="btn-primary rounded-2xl">
                   Create Job Posting
                 </button>
               )}

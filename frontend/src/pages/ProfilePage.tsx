@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { User, Settings, HelpCircle, FileText } from 'lucide-react';
-import { useLocation } from 'react-router-dom';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { User, Settings, HelpCircle, FileText, RefreshCw } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService, Profile, ProfileUpdate, ChangePasswordRequest } from '../services/api';
 import ProfileTab from '../components/profile/ProfileTab';
@@ -10,37 +10,73 @@ import HelpCenterTab from '../components/profile/HelpCenterTab';
 
 type TabType = 'profile' | 'resume' | 'settings' | 'help';
 
+const tabPathMap: Record<TabType, string> = {
+  profile: '/profile',
+  resume: '/resume',
+  settings: '/settings',
+  help: '/help',
+};
+
+const pathTabMap: Record<string, TabType> = {
+  '/profile': 'profile',
+  '/resume': 'resume',
+  '/settings': 'settings',
+  '/help': 'help',
+};
+
 const ProfilePage: React.FC = () => {
   const { user } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const isCandidate = user?.role?.toLowerCase() === 'candidate';
 
-  const getInitialTab = (): TabType => {
-    if (location.pathname === '/settings') return 'settings';
-    if (location.pathname === '/help') return 'help';
-    return 'profile';
-  };
+  const activeTab = useMemo<TabType>(() => {
+    const nextTab = pathTabMap[location.pathname];
+    if (nextTab === 'resume' && !isCandidate) {
+      return 'profile';
+    }
+    return nextTab || 'profile';
+  }, [isCandidate, location.pathname]);
 
-  const [activeTab, setActiveTab] = useState<TabType>(getInitialTab());
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const fetchProfile = useCallback(async (isRefresh = false) => {
+    try {
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+      const data = await apiService.getMyProfile();
+      setProfile(data);
+      setError(null);
+    } catch (err) {
+      if (!isRefresh) {
+        setError(err instanceof Error ? err.message : 'Failed to load profile');
+      }
+    } finally {
+      if (isRefresh) {
+        setRefreshing(false);
+      } else {
+        setLoading(false);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     fetchProfile();
-  }, []);
+  }, [fetchProfile]);
 
-  const fetchProfile = async () => {
-    try {
-      setLoading(true);
-      const data = await apiService.getMyProfile();
-      setProfile(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load profile');
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    if (!isCandidate && location.pathname === '/resume') {
+      navigate('/profile', { replace: true });
     }
-  };
+  }, [isCandidate, location.pathname, navigate]);
+
+  const handleRefresh = () => fetchProfile(true);
 
   const handleUpdateProfile = async (data: ProfileUpdate) => {
     const updated = await apiService.updateMyProfile(data);
@@ -51,21 +87,41 @@ const ProfilePage: React.FC = () => {
     await apiService.changePassword(data);
   };
 
+  const handleTabChange = (tab: TabType) => {
+    navigate(tabPathMap[tab]);
+  };
+
   const tabs = [
     { id: 'profile' as TabType, label: 'My Profile', icon: User, show: true },
     { id: 'resume' as TabType, label: 'Resume', icon: FileText, show: isCandidate },
     { id: 'settings' as TabType, label: 'Settings', icon: Settings, show: true },
     { id: 'help' as TabType, label: 'Help Center', icon: HelpCircle, show: true },
-  ].filter((t) => t.show);
+  ].filter((tab) => tab.show);
+
+  const renderContent = () => {
+    if (!profile) return null;
+    if (activeTab === 'profile') {
+      return <ProfileTab profile={profile} user={user} onUpdate={handleUpdateProfile} onRefresh={handleRefresh} refreshing={refreshing} />;
+    }
+    if (activeTab === 'resume' && isCandidate) {
+      return <ResumeTab onProfileChanged={handleRefresh} />;
+    }
+    if (activeTab === 'settings') {
+      return <SettingsTab onChangePassword={handleChangePassword} />;
+    }
+    return <HelpCenterTab />;
+  };
 
   if (loading) {
     return (
-      <div className="flex-1">
-        <div className="bg-white border-b border-gray-200 px-8 py-6">
-          <h1 className="text-2xl font-bold text-gray-900">Profile</h1>
+      <div className="flex-1 min-h-screen" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+        <div className="border-b px-6 md:px-8 py-6" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+          <h1 className="text-[28px] font-bold tracking-[-0.03em]" style={{ color: 'var(--text-primary)' }}>
+            Profile
+          </h1>
         </div>
-        <div className="p-8 flex items-center justify-center">
-          <div className="text-gray-500">Loading profile...</div>
+        <div className="p-6 md:p-8 flex items-center justify-center">
+          <div style={{ color: 'var(--text-muted)' }}>Loading profile...</div>
         </div>
       </div>
     );
@@ -73,12 +129,14 @@ const ProfilePage: React.FC = () => {
 
   if (error || !profile) {
     return (
-      <div className="flex-1">
-        <div className="bg-white border-b border-gray-200 px-8 py-6">
-          <h1 className="text-2xl font-bold text-gray-900">Profile</h1>
+      <div className="flex-1 min-h-screen" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+        <div className="border-b px-6 md:px-8 py-6" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+          <h1 className="text-[28px] font-bold tracking-[-0.03em]" style={{ color: 'var(--text-primary)' }}>
+            Profile
+          </h1>
         </div>
-        <div className="p-8">
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+        <div className="p-6 md:p-8">
+          <div className="px-4 py-3 rounded-xl border bg-red-50 text-red-700 border-red-200">
             {error || 'Failed to load profile'}
           </div>
         </div>
@@ -87,46 +145,57 @@ const ProfilePage: React.FC = () => {
   }
 
   return (
-    <div className="flex-1">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-8 py-6">
-        <h1 className="text-2xl font-bold text-gray-900">Profile</h1>
-        <p className="text-gray-600 mt-1">Manage your personal information and settings</p>
-      </div>
-
-      {/* Tabs */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="px-8">
-          <div className="flex gap-4">
-            {tabs.map((tab) => {
-              const Icon = tab.icon;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 px-4 py-4 border-b-2 font-medium transition-colors ${
-                    activeTab === tab.id
-                      ? 'border-blue-600 text-blue-600'
-                      : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
-                  }`}
-                >
-                  <Icon size={20} />
-                  {tab.label}
-                </button>
-              );
-            })}
+    <div className="flex-1 min-h-screen" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+      <div className="border-b px-6 md:px-8 py-6" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-[30px] font-bold tracking-[-0.03em]" style={{ color: 'var(--text-primary)' }}>
+              Profile
+            </h1>
+            <p className="mt-2 text-sm" style={{ color: 'var(--text-muted)' }}>
+              Manage your personal information and settings
+            </p>
           </div>
+          <button
+            type="button"
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-colors disabled:opacity-50"
+            style={{ border: '1px solid var(--border)', color: 'var(--text-secondary)', backgroundColor: 'var(--bg-card)' }}
+            title="Reload profile data"
+          >
+            <RefreshCw size={16} strokeWidth={1.9} className={refreshing ? 'animate-spin' : ''} />
+            <span className="hidden sm:inline">Refresh</span>
+          </button>
         </div>
       </div>
 
-      {/* Tab Content */}
-      <div className="p-8">
-        {activeTab === 'profile' && (
-          <ProfileTab profile={profile} user={user} onUpdate={handleUpdateProfile} />
-        )}
-        {activeTab === 'resume' && isCandidate && <ResumeTab />}
-        {activeTab === 'settings' && <SettingsTab onChangePassword={handleChangePassword} />}
-        {activeTab === 'help' && <HelpCenterTab />}
+      <div className="border-b px-6 md:px-8" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+        <div className="flex gap-2 overflow-x-auto">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => handleTabChange(tab.id)}
+                className="flex items-center gap-2 px-4 py-4 border-b-2 font-medium text-sm transition-colors whitespace-nowrap"
+                style={{
+                  borderBottomColor: isActive ? 'var(--accent)' : 'transparent',
+                  color: isActive ? 'var(--accent)' : 'var(--text-muted)',
+                }}
+              >
+                <Icon size={18} strokeWidth={1.9} />
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="p-6 md:p-8">
+        {renderContent()}
       </div>
     </div>
   );

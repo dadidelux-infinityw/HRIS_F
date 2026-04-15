@@ -7,8 +7,13 @@ from pydantic import BaseModel
 
 from app.db.database import get_db
 from app.models.user import User
+from app.models.profile import Profile
+from app.models.resume import Resume
+from app.models.application import Application
+from app.models.interview import Interview
+from app.models.job_posting import JobPosting
 from app.schemas.user import UserResponse, UserUpdate
-from app.core.dependencies import get_current_user, get_current_active_admin
+from app.core.dependencies import get_current_user, get_current_active_admin, get_current_hr_or_admin
 
 router = APIRouter()
 
@@ -89,9 +94,9 @@ def get_all_users(
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_admin)
+    current_user: User = Depends(get_current_hr_or_admin)
 ):
-    """Get all users (admin only)"""
+    """Get all users (HR or Admin only)"""
     users = db.query(User).offset(skip).limit(limit).all()
     return users
 
@@ -157,9 +162,15 @@ def update_user(
 def delete_user(
     user_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_admin)
+    current_user: User = Depends(get_current_hr_or_admin)
 ):
-    """Delete user (admin only)"""
+    """Delete user (HR or Admin only). Cascades: profile, resume, applications → interviews."""
+    if user_id == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot delete your own account"
+        )
+
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(
@@ -167,6 +178,26 @@ def delete_user(
             detail="User not found"
         )
 
+    # 1. Delete profile
+    db.query(Profile).filter(Profile.user_id == user_id).delete()
+
+    # 2. Delete resume
+    db.query(Resume).filter(Resume.user_id == user_id).delete()
+
+    # 3. Delete interviews linked to this user's applications, then the applications
+    user_app_ids = [
+        a.id for a in db.query(Application).filter(Application.user_id == user_id).all()
+    ]
+    if user_app_ids:
+        db.query(Interview).filter(Interview.application_id.in_(user_app_ids)).delete(synchronize_session=False)
+    db.query(Application).filter(Application.user_id == user_id).delete()
+
+    # 4. Nullify created_by on job postings instead of deleting them
+    db.query(JobPosting).filter(JobPosting.created_by == user_id).update(
+        {"created_by": None}, synchronize_session=False
+    )
+
+    # 5. Finally delete the user
     db.delete(user)
     db.commit()
 

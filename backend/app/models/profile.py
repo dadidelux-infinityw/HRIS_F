@@ -19,6 +19,7 @@ class Profile(Base):
     # Profile information
     bio = Column(Text, nullable=True)
     skills = Column(JSON, default=list, nullable=False)  # List of skills
+    resume_skills = Column(JSON, default=list, nullable=False)  # Skills sourced from resume (provenance tracking)
     phone = Column(String(20), nullable=True)
     address = Column(Text, nullable=True)
 

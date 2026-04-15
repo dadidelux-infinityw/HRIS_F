@@ -63,10 +63,16 @@ class ResumeUploadResponse(BaseModel):
     parsing_status: ResumeParsingStatusEnum
     uploaded_at: datetime
     skills_added: List[str] = []
+    skills_removed: List[str] = []
     message: str
 
     class Config:
         from_attributes = True
+
+
+class ResumeDeleteResponse(BaseModel):
+    message: str
+    skills_removed: List[str] = []
 
 
 class ResumeResponse(BaseModel):

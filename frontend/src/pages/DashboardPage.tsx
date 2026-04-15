@@ -1,7 +1,7 @@
 import React from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import AdminDashboard from '../components/dashboard/AdminDashboard';
 import CandidateDashboard from '../components/dashboard/CandidateDashboard';
+import AdminDashboard from '../components/dashboard/AdminDashboard';
 
 const DashboardPage: React.FC = () => {
   const { user } = useAuth();

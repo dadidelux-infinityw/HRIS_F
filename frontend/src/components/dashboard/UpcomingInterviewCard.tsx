@@ -1,148 +1,75 @@
-import { Calendar, Clock, MapPin, Video } from "lucide-react";
-import { Link } from "react-router-dom";
-import type { UpcomingInterviewData } from "../../services/api";
+import React from 'react';
+import { Calendar, Clock, MapPin, Phone } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import type { UpcomingInterviewData } from '../../services/api';
 
 interface UpcomingInterviewCardProps {
-  interview: UpcomingInterviewData | null;
+  interview: UpcomingInterviewData;
 }
 
 const UpcomingInterviewCard: React.FC<UpcomingInterviewCardProps> = ({
   interview,
 }) => {
-  if (!interview) {
-    return (
-      <div
-        className="flex flex-col items-center justify-center p-8 rounded-xl border"
-        style={{
-          backgroundColor: "var(--bg-card)",
-          borderColor: "var(--border)",
-        }}
-      >
-        <Calendar
-          size={40}
-          style={{ color: "var(--text-muted)" }}
-          className="mb-3"
-        />
-        <h3
-          className="text-base font-semibold mb-1"
-          style={{ color: "var(--text-primary)" }}
-        >
-          No Upcoming Interviews
-        </h3>
-        <p
-          className="text-sm text-center"
-          style={{ color: "var(--text-muted)" }}
-        >
-          You have no scheduled interviews
-        </p>
-      </div>
-    );
-  }
+  const formatDateTime = (date: string, time: string) => {
+    try {
+      const d = new Date(date);
+      const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
+      const month = d.toLocaleDateString('en-US', { month: 'short' });
+      const day = d.getDate();
+      return `${dayName}, ${month} ${day} at ${time}`;
+    } catch {
+      return `${date}, ${time}`;
+    }
+  };
 
   return (
     <div
-      className="flex flex-col gap-4 p-6 rounded-xl border"
-      style={{
-        backgroundColor: "var(--bg-card)",
-        borderColor: "var(--border)",
-      }}
+      className="rounded-3xl p-5 flex items-center justify-between flex-wrap gap-4 group hover:shadow-md transition-all duration-300"
+      style={{ backgroundColor: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.12)', boxShadow: 'none' }}
     >
-      <h3
-        className="font-semibold"
-        style={{ color: "var(--text-primary)", fontSize: "19px" }}
-      >
-        Upcoming Interview
-      </h3>
-
-      <p
-        className="font-medium"
-        style={{ color: "var(--text-primary)", fontSize: "17px" }}
-      >
-        {interview.job_title}
-      </p>
-
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-2">
-          <Calendar
-            size={16}
-            style={{ color: "var(--text-muted)" }}
-          />
-          <span
-            className="text-sm"
-            style={{ color: "var(--text-muted)" }}
-          >
-            Date:
-          </span>
-          <span
-            className="text-sm"
-            style={{ color: "var(--text-primary)" }}
-          >
-            {interview.interview_date}
-          </span>
+      <div className="flex items-center gap-4">
+        <div
+          className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105 shadow-sm"
+          style={{ backgroundColor: 'rgba(168, 85, 247, 0.14)', color: '#9333ea' }}
+        >
+          <Calendar size={20} strokeWidth={2.5} />
         </div>
-
-        <div className="flex items-center gap-2">
-          <Clock
-            size={16}
-            style={{ color: "var(--text-muted)" }}
-          />
-          <span
-            className="text-sm"
-            style={{ color: "var(--text-muted)" }}
+        <div>
+          <h3
+            className="font-bold leading-tight"
+            style={{ fontSize: '15px', color: 'var(--text-primary)' }}
           >
-            Time:
-          </span>
-          <span
-            className="text-sm"
-            style={{ color: "var(--text-primary)" }}
+            Upcoming Interview
+          </h3>
+          <p
+            className="font-bold text-sm mt-0.5"
+            style={{ color: 'var(--text-secondary)' }}
           >
-            {interview.interview_time}
-          </span>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <MapPin
-            size={16}
-            style={{ color: "var(--text-muted)" }}
-          />
-          <span
-            className="text-sm"
-            style={{ color: "var(--text-muted)" }}
-          >
-            Location:
-          </span>
-          <span
-            className="text-sm"
-            style={{ color: "var(--text-primary)" }}
-          >
-            {interview.location}
-          </span>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Video
-            size={16}
-            style={{ color: "var(--text-muted)" }}
-          />
-          <span
-            className="text-sm"
-            style={{ color: "var(--text-muted)" }}
-          >
-            Type:
-          </span>
-          <span
-            className="text-sm"
-            style={{ color: "var(--text-primary)" }}
-          >
-            {interview.interview_type}
-          </span>
+            {interview.job_title}
+          </p>
+          <div className="flex items-center gap-4 mt-2 flex-wrap text-[13px] font-medium" style={{ color: 'var(--text-muted)' }}>
+            <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-md border" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+              <Clock size={12} strokeWidth={2.5} />
+              {formatDateTime(interview.interview_date, interview.interview_time)}
+            </span>
+            {interview.location && (
+              <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-md border" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+                <MapPin size={12} strokeWidth={2.5} />
+                {interview.location}
+              </span>
+            )}
+            {interview.interview_type === 'Phone' && (
+              <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-md border" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+                <Phone size={12} strokeWidth={2.5} />
+                Phone Interview
+              </span>
+            )}
+          </div>
         </div>
       </div>
-
       <Link
         to="/my-interviews"
-        className="self-start text-sm font-medium mt-1 hover:underline"
-        style={{ color: "var(--text-muted)" }}
+        className="dashboard-soft-button px-5 py-2.5 rounded-xl text-[13px] font-bold transition-all shadow-sm hover:shadow-md whitespace-nowrap"
       >
         View Details
       </Link>

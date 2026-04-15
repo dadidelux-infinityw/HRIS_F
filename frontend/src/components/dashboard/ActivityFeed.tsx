@@ -1,114 +1,108 @@
 import React from 'react';
-import { FileText, Calendar, Send, Clock } from 'lucide-react';
-import type { ActivityItem } from '../../services/api';
+import { 
+  FileText, 
+  Calendar, 
+  CheckCircle2, 
+  Clock,
+} from 'lucide-react';
+import { ActivityItem } from '../../services/api';
 
 interface ActivityFeedProps {
   items: ActivityItem[];
 }
 
-function getRelativeTime(timestamp: string): string {
-  const now = new Date();
-  const then = new Date(timestamp);
-  const diffMs = now.getTime() - then.getTime();
-  const diffSeconds = Math.floor(diffMs / 1000);
-  const diffMinutes = Math.floor(diffSeconds / 60);
-  const diffHours = Math.floor(diffMinutes / 60);
-  const diffDays = Math.floor(diffHours / 24);
+const getActivityIcon = (type: string) => {
+  switch (type) {
+    case 'application_submitted': return { icon: FileText, bg: 'bg-blue-50', text: 'text-blue-600' };
+    case 'interview_scheduled': return { icon: Calendar, bg: 'bg-orange-50', text: 'text-orange-600' };
+    case 'application_status': return { icon: CheckCircle2, bg: 'bg-green-50', text: 'text-green-600' };
+    default: return { icon: Clock, bg: 'bg-slate-50', text: 'text-slate-600' };
+  }
+};
 
-  if (diffMinutes < 1) return 'Just now';
-  if (diffMinutes < 60) return `${diffMinutes} minute${diffMinutes !== 1 ? 's' : ''} ago`;
-  if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
-  if (diffDays < 2) return 'Yesterday';
-  if (diffDays <= 30) return `${diffDays} days ago`;
-
-  return then.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-}
-
-const iconConfig: Record<
-  ActivityItem['type'],
-  { icon: React.ElementType; bgColor: string }
-> = {
-  application_status: { icon: FileText, bgColor: '#3b82f6' },
-  interview_scheduled: { icon: Calendar, bgColor: '#8b5cf6' },
-  application_submitted: { icon: Send, bgColor: '#22c55e' },
+const formatTimeAgo = (dateStr: string) => {
+  try {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+    
+    if (diffInSeconds < 60) return 'Just now';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`;
+    
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  } catch {
+    return dateStr;
+  }
 };
 
 const ActivityFeed: React.FC<ActivityFeedProps> = ({ items }) => {
+  const getIconSurface = (type: string) => {
+    switch (type) {
+      case 'application_submitted':
+        return { backgroundColor: 'rgba(59, 130, 246, 0.14)', color: '#2563eb' };
+      case 'interview_scheduled':
+        return { backgroundColor: 'rgba(249, 115, 22, 0.14)', color: '#ea580c' };
+      case 'application_status':
+        return { backgroundColor: 'rgba(34, 197, 94, 0.14)', color: '#16a34a' };
+      default:
+        return { backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-muted)' };
+    }
+  };
+
   return (
-    <div
-      className="rounded-xl border p-5"
-      style={{
-        backgroundColor: 'var(--bg-card)',
-        borderColor: 'var(--border)',
-      }}
-    >
-      <h3
-        className="font-semibold mb-4"
-        style={{ fontSize: '19px', color: 'var(--text-primary)' }}
-      >
-        Recent Activity
-      </h3>
+    <div className="rounded-3xl p-6 dashboard-card">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
+          Activity Feed
+        </h3>
+      </div>
 
       {items.length === 0 ? (
         <div
-          className="flex flex-col items-center justify-center py-8"
+          className="flex flex-col items-center justify-center py-10 text-center"
           style={{ color: 'var(--text-muted)' }}
         >
-          <Clock size={40} className="mb-3 opacity-50" />
-          <p className="text-sm">No recent activity</p>
+          <Clock size={32} className="opacity-20 mb-3" />
+          <p className="text-sm font-medium">No recent activity</p>
         </div>
       ) : (
-        <div className="flex flex-col">
+        <div className="space-y-6">
           {items.map((item, index) => {
-            const config = iconConfig[item.type];
-            const Icon = config.icon;
-
+            const { icon: Icon } = getActivityIcon(item.type);
+            const iconSurface = getIconSurface(item.type);
             return (
-              <React.Fragment key={index}>
-                <div className="flex items-start gap-3 py-3">
+              <div key={`${item.timestamp}-${item.job_title}-${index}`} className="flex gap-4 relative group">
+                {/* Connector Line */}
+                {index !== items.length - 1 && (
                   <div
-                    className="flex items-center justify-center flex-shrink-0 rounded-full"
-                    style={{
-                      backgroundColor: config.bgColor,
-                      width: '32px',
-                      height: '32px',
-                    }}
-                  >
-                    <Icon size={16} className="text-white" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p
-                      style={{
-                        fontSize: '15px',
-                        color: 'var(--text-primary)',
-                      }}
-                    >
-                      {item.message}
-                    </p>
-                    <p
-                      className="mt-0.5"
-                      style={{
-                        fontSize: '12px',
-                        color: 'var(--text-muted)',
-                      }}
-                    >
-                      {getRelativeTime(item.timestamp)}
-                    </p>
-                  </div>
-                </div>
-                {index < items.length - 1 && (
-                  <div
-                    style={{
-                      height: '1px',
-                      backgroundColor: 'var(--border)',
-                    }}
+                    className="absolute left-6 top-10 bottom-[-24px] w-[2px] transition-colors"
+                    style={{ backgroundColor: 'var(--border)' }}
                   />
                 )}
-              </React.Fragment>
+
+                <div
+                  className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 z-10 shadow-sm transition-transform group-hover:scale-105"
+                  style={iconSurface}
+                >
+                  <Icon size={20} strokeWidth={2.5} />
+                </div>
+
+                <div className="flex-1 min-w-0 pt-1">
+                  <div className="flex justify-between items-start mb-1">
+                    <p className="text-[14px] font-bold leading-snug" style={{ color: 'var(--text-primary)' }}>
+                      {item.job_title}
+                    </p>
+                    <span className="text-[12px] font-semibold whitespace-nowrap ml-2" style={{ color: 'var(--text-muted)' }}>
+                      {formatTimeAgo(item.timestamp)}
+                    </span>
+                  </div>
+                  <p className="text-[13px] font-medium truncate" style={{ color: 'var(--text-muted)' }}>
+                    {item.message}
+                  </p>
+                </div>
+              </div>
             );
           })}
         </div>

@@ -10,6 +10,7 @@ from uuid import UUID
 class ProfileBase(BaseModel):
     bio: Optional[str] = None
     skills: List[str] = []
+    resume_skills: List[str] = []
     phone: Optional[str] = None
     address: Optional[str] = None
 
@@ -18,8 +19,12 @@ class ProfileCreate(ProfileBase):
     pass
 
 
-class ProfileUpdate(ProfileBase):
-    pass
+class ProfileUpdate(BaseModel):
+    """User-editable profile fields. resume_skills is managed internally."""
+    bio: Optional[str] = None
+    skills: Optional[List[str]] = None
+    phone: Optional[str] = None
+    address: Optional[str] = None
 
 
 class DocumentInfo(BaseModel):

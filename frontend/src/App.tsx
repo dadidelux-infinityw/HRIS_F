@@ -50,6 +50,7 @@ function App() {
             <Route path="analytics" element={<AnalyticsPage />} />
             <Route path="reports" element={<ReportsPage />} />
             <Route path="profile" element={<ProfilePage />} />
+            <Route path="resume" element={<ProfilePage />} />
             <Route path="settings" element={<ProfilePage />} />
             <Route path="help" element={<ProfilePage />} />
           </Route>

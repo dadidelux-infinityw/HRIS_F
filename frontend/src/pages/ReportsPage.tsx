@@ -1,6 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Download, Plus, ClipboardList, Users, Calendar, BarChart3, Loader2 } from 'lucide-react';
+import {
+  FileText,
+  Download,
+  Plus,
+  ClipboardList,
+  Users,
+  Calendar,
+  BarChart3,
+  Loader2,
+} from 'lucide-react';
 import { apiService } from '../services/api';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface RecentReport {
   title: string;
@@ -16,39 +26,38 @@ const REPORT_TYPES = [
     label: 'Applicant List',
     description: 'All applicants with contact info and status',
     icon: ClipboardList,
-    color: 'text-blue-600',
-    bg: 'bg-blue-50',
+    iconColor: '#60a5fa',
+    iconBg: 'rgba(96, 165, 250, 0.14)',
   },
   {
     id: 'shortlisted',
     label: 'Shortlisted Candidates',
     description: 'Candidates currently In-Process or Accepted',
     icon: Users,
-    color: 'text-green-600',
-    bg: 'bg-green-50',
+    iconColor: '#34d399',
+    iconBg: 'rgba(52, 211, 153, 0.14)',
   },
   {
     id: 'interview-results',
     label: 'Interview Results',
     description: 'All scheduled and completed interviews',
     icon: Calendar,
-    color: 'text-purple-600',
-    bg: 'bg-purple-50',
+    iconColor: '#a78bfa',
+    iconBg: 'rgba(167, 139, 250, 0.14)',
   },
   {
     id: 'hiring-summary',
     label: 'Hiring Summary',
     description: 'Aggregate hiring statistics',
     icon: BarChart3,
-    color: 'text-orange-600',
-    bg: 'bg-orange-50',
+    iconColor: '#fbbf24',
+    iconBg: 'rgba(251, 191, 36, 0.14)',
   },
 ] as const;
 
-type ReportId = typeof REPORT_TYPES[number]['id'];
+type ReportId = (typeof REPORT_TYPES)[number]['id'];
 
 const STORAGE_KEY = 'hris_recent_reports';
-
 const loadRecentReports = (): RecentReport[] => {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -59,7 +68,7 @@ const loadRecentReports = (): RecentReport[] => {
 };
 
 const saveRecentReports = (reports: RecentReport[]) => {
-  const toSave = reports.slice(0, 10).map(({ blob: _b, ...rest }) => rest);
+  const toSave = reports.slice(0, 10).map(({ blob: _unused, ...rest }) => rest);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
 };
 
@@ -73,18 +82,20 @@ const downloadCsv = (csv: string, filename: string) => {
   URL.revokeObjectURL(url);
 };
 
-const fmt = (v: any) => {
-  if (v === null || v === undefined) return '';
-  const s = String(v);
-  if (s.includes(',') || s.includes('"') || s.includes('\n')) return `"${s.replace(/"/g, '""')}"`;
-  return s;
+const fmt = (value: any) => {
+  if (value === null || value === undefined) return '';
+  const stringValue = String(value);
+  if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
+    return `"${stringValue.replace(/"/g, '""')}"`;
+  }
+  return stringValue;
 };
 
-const buildCsv = (headers: string[], rows: string[][]): string => {
-  return [headers, ...rows].map(row => row.map(fmt).join(',')).join('\n');
-};
+const buildCsv = (headers: string[], rows: string[][]): string =>
+  [headers, ...rows].map((row) => row.map(fmt).join(',')).join('\n');
 
 const ReportsPage: React.FC = () => {
+  const { darkMode } = useTheme();
   const [selectedType, setSelectedType] = useState<ReportId>('applicant-list');
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState('');
@@ -97,8 +108,13 @@ const ReportsPage: React.FC = () => {
   const generateReport = async () => {
     setGenerating(true);
     setError('');
+
     const now = new Date();
-    const dateStr = now.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    const dateStr = now.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
     const fileDate = now.toISOString().slice(0, 10);
 
     try {
@@ -107,37 +123,39 @@ const ReportsPage: React.FC = () => {
       let filename = '';
 
       if (selectedType === 'applicant-list') {
-        title = 'Applicant Masterlist';
+        title = 'Applicant List';
         filename = `applicant_list_${fileDate}.csv`;
         const apps = await apiService.getAllApplications();
         csv = buildCsv(
           ['Full Name', 'Email', 'Job Title', 'Department', 'Location', 'Status', 'Recruitment Stage', 'Applied Date'],
-          apps.map(a => [
-            a.user?.full_name || '',
-            a.user?.email || '',
-            a.job_posting?.job_title || '',
-            a.job_posting?.department || '',
-            a.job_posting?.location || '',
-            a.status,
-            a.recruitment_stage || '',
-            a.applied_date,
+          apps.map((application) => [
+            application.user?.full_name || '',
+            application.user?.email || '',
+            application.job_posting?.job_title || '',
+            application.job_posting?.department || '',
+            application.job_posting?.location || '',
+            application.status,
+            application.recruitment_stage || '',
+            application.applied_date,
           ])
         );
       } else if (selectedType === 'shortlisted') {
         title = 'Shortlisted Candidates';
         filename = `shortlisted_${fileDate}.csv`;
         const apps = await apiService.getAllApplications();
-        const filtered = apps.filter(a => a.status === 'In-Process' || a.status === 'Accepted');
+        const filtered = apps.filter(
+          (application) => application.status === 'In-Process' || application.status === 'Accepted'
+        );
         csv = buildCsv(
           ['Full Name', 'Email', 'Job Title', 'Department', 'Status', 'Recruitment Stage', 'Applied Date'],
-          filtered.map(a => [
-            a.user?.full_name || '',
-            a.user?.email || '',
-            a.job_posting?.job_title || '',
-            a.job_posting?.department || '',
-            a.status,
-            a.recruitment_stage || '',
-            a.applied_date,
+          filtered.map((application) => [
+            application.user?.full_name || '',
+            application.user?.email || '',
+            application.job_posting?.job_title || '',
+            application.job_posting?.department || '',
+            application.status,
+            application.recruitment_stage || '',
+            application.applied_date,
           ])
         );
       } else if (selectedType === 'interview-results') {
@@ -146,14 +164,14 @@ const ReportsPage: React.FC = () => {
         const interviews = await apiService.getAllInterviews();
         csv = buildCsv(
           ['Interview Date', 'Time', 'Type', 'Status', 'Location', 'Interviewer', 'Notes'],
-          interviews.map(iv => [
-            iv.interview_date,
-            iv.interview_time,
-            iv.interview_type,
-            iv.status,
-            iv.location,
-            iv.interviewer_name || '',
-            iv.notes || '',
+          interviews.map((interview) => [
+            interview.interview_date,
+            interview.interview_time,
+            interview.interview_type,
+            interview.status,
+            interview.location,
+            interview.interviewer_name || '',
+            interview.notes || '',
           ])
         );
       } else if (selectedType === 'hiring-summary') {
@@ -163,11 +181,12 @@ const ReportsPage: React.FC = () => {
           apiService.getAllApplications(),
           apiService.getAnalytics(),
         ]);
-        const pending = apps.filter(a => a.status === 'Pending').length;
-        const inProcess = apps.filter(a => a.status === 'In-Process').length;
-        const accepted = apps.filter(a => a.status === 'Accepted').length;
-        const rejected = apps.filter(a => a.status === 'Rejected').length;
-        const withdrawn = apps.filter(a => a.status === 'Withdrawn').length;
+        const pending = apps.filter((application) => application.status === 'Pending').length;
+        const inProcess = apps.filter((application) => application.status === 'In-Process').length;
+        const accepted = apps.filter((application) => application.status === 'Accepted').length;
+        const rejected = apps.filter((application) => application.status === 'Rejected').length;
+        const withdrawn = apps.filter((application) => application.status === 'Withdrawn').length;
+
         csv = buildCsv(
           ['Metric', 'Value'],
           [
@@ -189,7 +208,7 @@ const ReportsPage: React.FC = () => {
       downloadCsv(csv, filename);
 
       const report: RecentReport = { title, type: 'CSV', date: dateStr, filename };
-      setRecentReports(prev => [report, ...prev.slice(0, 9)]);
+      setRecentReports((prev) => [report, ...prev.slice(0, 9)]);
     } catch (err: any) {
       setError(err.message || 'Failed to generate report.');
     } finally {
@@ -197,157 +216,222 @@ const ReportsPage: React.FC = () => {
     }
   };
 
+  const regenerateReport = (report: RecentReport) => {
+    const match = REPORT_TYPES.find((type) => type.label === report.title);
+    if (!match) return;
+    setSelectedType(match.id);
+    setTimeout(generateReport, 50);
+  };
+
+  const panelStyle = {
+    backgroundColor: darkMode ? 'rgba(24, 34, 51, 0.92)' : 'rgba(255, 255, 255, 0.86)',
+    border: darkMode ? '1px solid rgba(71, 85, 105, 0.38)' : '1px solid rgba(255, 255, 255, 0.7)',
+    boxShadow: darkMode ? '0 16px 40px rgba(2, 6, 23, 0.22)' : '0 18px 40px rgba(148, 163, 184, 0.14)',
+  } as const;
+
   return (
-    <div className="p-8 min-h-screen" style={{ backgroundColor: 'var(--bg-secondary)' }}>
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
-          <FileText size={24} className="text-blue-600" />
-          Reports
-        </h1>
-        <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-          Generate and download recruitment reports
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        {/* Left panel — report type selector */}
-        <div
-          className="lg:col-span-2 rounded-xl shadow-sm p-5"
-          style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)' }}
-        >
-          <h2 className="text-sm font-semibold mb-4 uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>
-            Generate Report
-          </h2>
-
-          <div className="space-y-2 mb-6">
-            {REPORT_TYPES.map(rt => {
-              const Icon = rt.icon;
-              const isSelected = selectedType === rt.id;
-              return (
-                <button
-                  key={rt.id}
-                  onClick={() => setSelectedType(rt.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all ${
-                    isSelected ? 'shadow-sm' : ''
-                  }`}
-                  style={{
-                    border: isSelected ? '1px solid var(--accent)' : '1px solid var(--border)',
-                    backgroundColor: isSelected ? 'var(--accent-light)' : 'transparent',
-                  }}
-                >
-                  <div className={`w-9 h-9 rounded-lg ${rt.bg} flex items-center justify-center flex-shrink-0`}>
-                    <Icon size={18} className={rt.color} />
-                  </div>
-                  <div className="min-w-0">
-                    <p
-                      className="text-sm font-medium"
-                      style={{ color: isSelected ? 'var(--text-active)' : 'var(--text-primary)' }}
-                    >
-                      {rt.label}
-                    </p>
-                    <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>{rt.description}</p>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-
-          {error && (
-            <p className="text-red-600 text-xs mb-3 bg-red-50 rounded px-3 py-2 border border-red-200">
-              {error}
-            </p>
-          )}
-
-          <button
-            onClick={generateReport}
-            disabled={generating}
-            className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white text-sm font-medium py-2.5 rounded-lg transition-colors"
-          >
-            {generating
-              ? <Loader2 size={16} className="animate-spin" />
-              : <Plus size={16} />
-            }
-            {generating ? 'Generating…' : 'Generate Report'}
-          </button>
+    <div className="dashboard-page min-h-screen p-8">
+      <div className="max-w-7xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold flex items-center gap-3" style={{ color: 'var(--text-primary)' }}>
+            <span
+              className="h-11 w-11 rounded-2xl flex items-center justify-center"
+              style={{
+                backgroundColor: 'rgba(99, 102, 241, 0.12)',
+                color: '#818cf8',
+                border: '1px solid rgba(129, 140, 248, 0.16)',
+              }}
+            >
+              <FileText size={22} />
+            </span>
+            Reports
+          </h1>
+          <p className="text-sm mt-2" style={{ color: 'var(--text-muted)' }}>
+            Generate and download recruitment reports
+          </p>
         </div>
 
-        {/* Right panel — recent reports */}
-        <div
-          className="lg:col-span-3 rounded-xl shadow-sm p-5"
-          style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)' }}
-        >
-          <h2 className="text-sm font-semibold mb-4 uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>
-            Recent Reports
-          </h2>
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+          <div className="lg:col-span-2 rounded-[28px] p-6" style={panelStyle}>
+            <h2 className="text-sm font-semibold mb-5 uppercase tracking-[0.16em]" style={{ color: 'var(--text-muted)' }}>
+              Generate Report
+            </h2>
 
-          {recentReports.length === 0 ? (
-            <div className="text-center py-16" style={{ color: 'var(--text-muted)' }}>
-              <FileText size={40} className="mx-auto mb-3 opacity-40" />
-              <p className="text-sm">No reports generated yet.</p>
-              <p className="text-xs mt-1">Select a report type and click Generate.</p>
-            </div>
-          ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b" style={{ borderColor: 'var(--border-light)' }}>
-                  <th className="text-left py-2 px-3 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
-                    Report Title
-                  </th>
-                  <th className="text-left py-2 px-3 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
-                    Type
-                  </th>
-                  <th className="text-left py-2 px-3 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
-                    Date
-                  </th>
-                  <th className="py-2 px-3 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
-                    Action
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentReports.map((r, i) => (
-                  <tr
-                    key={i}
-                    className="border-b transition-colors"
-                    style={{ borderColor: 'var(--border-light)' }}
-                    onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--table-row-hover)')}
-                    onMouseLeave={e => (e.currentTarget.style.backgroundColor = '')}
+            <div className="space-y-3 mb-6">
+              {REPORT_TYPES.map((reportType) => {
+                const Icon = reportType.icon;
+                const isSelected = selectedType === reportType.id;
+
+                return (
+                  <button
+                    key={reportType.id}
+                    onClick={() => setSelectedType(reportType.id)}
+                    className="w-full flex items-center gap-4 px-5 py-4 rounded-[22px] text-left transition-all"
+                    style={{
+                      border: isSelected
+                        ? darkMode
+                          ? '1px solid rgba(251, 191, 36, 0.24)'
+                          : '1px solid rgba(245, 158, 11, 0.24)'
+                        : darkMode
+                          ? '1px solid rgba(71, 85, 105, 0.3)'
+                          : '1px solid rgba(203, 213, 225, 0.72)',
+                      background: isSelected
+                        ? darkMode
+                          ? 'linear-gradient(135deg, rgba(251, 191, 36, 0.16) 0%, rgba(245, 158, 11, 0.22) 100%)'
+                          : 'linear-gradient(135deg, rgba(255, 247, 237, 0.96) 0%, rgba(255, 237, 213, 0.94) 100%)'
+                        : darkMode
+                          ? 'rgba(30, 41, 59, 0.54)'
+                          : 'rgba(248, 250, 252, 0.96)',
+                      boxShadow: isSelected
+                        ? darkMode
+                          ? '0 14px 32px rgba(245, 158, 11, 0.12)'
+                          : '0 14px 28px rgba(245, 158, 11, 0.08)'
+                        : 'none',
+                    }}
                   >
-                    <td className="py-3 px-3 font-medium" style={{ color: 'var(--text-primary)' }}>
-                      {r.title}
-                    </td>
-                    <td className="py-3 px-3">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-green-100 text-green-700 border border-green-200">
-                        {r.type}
-                      </span>
-                    </td>
-                    <td className="py-3 px-3" style={{ color: 'var(--text-muted)' }}>{r.date}</td>
-                    <td className="py-3 px-3 text-center">
-                      <button
-                        onClick={() => {
-                          const prev = selectedType;
-                          const match = REPORT_TYPES.find(rt => rt.label === r.title);
-                          if (match) {
-                            setSelectedType(match.id);
-                            setTimeout(generateReport, 50);
-                          }
-                          setSelectedType(prev);
-                        }}
-                        className="p-1.5 rounded-lg text-blue-600 transition-colors"
-                        style={{ backgroundColor: 'transparent' }}
-                        onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--accent-light)')}
-                        onMouseLeave={e => (e.currentTarget.style.backgroundColor = '')}
-                        title="Re-download"
+                    <div
+                      className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
+                      style={{
+                        backgroundColor: isSelected
+                          ? darkMode
+                            ? 'rgba(255,255,255,0.86)'
+                            : 'rgba(255,255,255,0.95)'
+                          : reportType.iconBg,
+                        color: isSelected ? '#d97706' : reportType.iconColor,
+                        border: darkMode ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(255,255,255,0.85)',
+                      }}
+                    >
+                      <Icon size={20} />
+                    </div>
+
+                    <div className="min-w-0">
+                      <p
+                        className="text-lg font-semibold"
+                        style={{ color: isSelected ? (darkMode ? '#fde68a' : '#9a6700') : 'var(--text-primary)' }}
                       >
-                        <Download size={16} />
-                      </button>
-                    </td>
-                  </tr>
+                        {reportType.label}
+                      </p>
+                      <p className="text-sm" style={{ color: isSelected ? (darkMode ? 'rgba(255, 248, 220, 0.82)' : '#b45309') : 'var(--text-muted)' }}>
+                        {reportType.description}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {error && (
+              <div
+                className="text-sm mb-4 rounded-2xl px-4 py-3"
+              style={{
+                color: darkMode ? '#fca5a5' : '#b42318',
+                backgroundColor: darkMode ? 'rgba(127, 29, 29, 0.2)' : '#fef3f2',
+                border: darkMode ? '1px solid rgba(248, 113, 113, 0.18)' : '1px solid #fecdca',
+              }}
+            >
+                {error}
+              </div>
+            )}
+
+            <button
+              onClick={generateReport}
+              disabled={generating}
+              className="w-full flex items-center justify-center gap-2 text-sm font-semibold py-4 rounded-[22px] transition-colors disabled:opacity-50"
+              style={{
+                background: darkMode
+                  ? 'linear-gradient(135deg, #4f5bd5 0%, #4048a5 100%)'
+                  : 'linear-gradient(135deg, #4f5bd5 0%, #5b67db 100%)',
+                color: '#ffffff',
+              }}
+            >
+              {generating ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+              {generating ? 'Generating...' : 'Generate Report'}
+            </button>
+          </div>
+
+          <div className="lg:col-span-3 rounded-[28px] p-6" style={panelStyle}>
+            <h2 className="text-sm font-semibold mb-5 uppercase tracking-[0.16em]" style={{ color: 'var(--text-muted)' }}>
+              Recent Reports
+            </h2>
+
+            {recentReports.length === 0 ? (
+              <div
+                className="rounded-[24px] min-h-[420px] flex flex-col items-center justify-center text-center"
+                style={{
+                  background: darkMode ? 'rgba(18, 26, 42, 0.44)' : 'rgba(248, 250, 252, 0.88)',
+                  border: darkMode ? '1px dashed rgba(71, 85, 105, 0.32)' : '1px dashed rgba(203, 213, 225, 0.9)',
+                }}
+              >
+                <div
+                  className="w-20 h-20 rounded-3xl flex items-center justify-center mb-5"
+                  style={{
+                    backgroundColor: darkMode ? 'rgba(99, 102, 241, 0.12)' : 'rgba(99, 102, 241, 0.1)',
+                    color: darkMode ? '#94a3b8' : '#818cf8',
+                  }}
+                >
+                  <FileText size={36} />
+                </div>
+                <p className="text-xl font-semibold" style={{ color: 'var(--text-secondary)' }}>
+                  No reports generated yet.
+                </p>
+                <p className="text-sm mt-2 max-w-sm" style={{ color: 'var(--text-muted)' }}>
+                  Pick a report type on the left and generate your first downloadable export.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {recentReports.map((report, index) => (
+                  <div
+                    key={`${report.filename}-${index}`}
+                    className="rounded-[22px] px-5 py-4 flex items-center gap-4"
+                    style={{
+                      background: darkMode ? 'rgba(30, 41, 59, 0.54)' : 'rgba(248, 250, 252, 0.96)',
+                      border: darkMode ? '1px solid rgba(71, 85, 105, 0.24)' : '1px solid rgba(226, 232, 240, 0.9)',
+                    }}
+                  >
+                    <div
+                      className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
+                      style={{ backgroundColor: 'rgba(96, 165, 250, 0.14)', color: '#60a5fa' }}
+                    >
+                      <FileText size={20} />
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold" style={{ color: 'var(--text-primary)' }}>
+                        {report.title}
+                      </p>
+                      <div className="flex items-center gap-3 mt-1 text-sm">
+                        <span
+                          className="inline-flex items-center px-2.5 py-1 rounded-full font-semibold"
+                          style={{
+                            color: darkMode ? '#86efac' : '#027a48',
+                            backgroundColor: darkMode ? 'rgba(20, 83, 45, 0.22)' : '#ecfdf3',
+                            border: darkMode ? '1px solid rgba(34, 197, 94, 0.18)' : '1px solid #abefc6',
+                          }}
+                        >
+                          {report.type}
+                        </span>
+                        <span style={{ color: 'var(--text-muted)' }}>{report.date}</span>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => regenerateReport(report)}
+                      className="h-11 w-11 rounded-2xl flex items-center justify-center transition-colors"
+                      style={{
+                        backgroundColor: darkMode ? 'rgba(79, 91, 213, 0.16)' : 'rgba(79, 91, 213, 0.08)',
+                        color: darkMode ? '#a5b4fc' : '#4f5bd5',
+                        border: darkMode ? '1px solid rgba(129, 140, 248, 0.18)' : '1px solid rgba(99, 102, 241, 0.14)',
+                      }}
+                      title="Re-download"
+                    >
+                      <Download size={18} />
+                    </button>
+                  </div>
                 ))}
-              </tbody>
-            </table>
-          )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

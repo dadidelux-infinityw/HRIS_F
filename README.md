@@ -77,10 +77,10 @@ docker-compose up -d
 ```
 
 This will start:
-- **Frontend**: http://localhost (port 80) or http://localhost:3000
-- **Backend API**: http://localhost:8000
-- **API Docs**: http://localhost:8000/docs
-- **PostgreSQL**: localhost:5432
+- **Frontend**: http://localhost:8082
+- **Backend API**: http://localhost:8083/api/v1
+- **API Docs**: http://localhost:8083/docs
+- **PostgreSQL**: localhost:5433
 
 3. **Seed the database** (optional - for sample data)
 ```bash
@@ -105,6 +105,14 @@ docker-compose --profile dev up
 ```
 
 This starts the `frontend-dev` service on port 5173 with Vite's hot module replacement.
+Open `http://localhost:5173` while editing UI files.
+
+Important: `docker-compose up -d` serves the built `frontend` image through Nginx on port `8082`.
+If you are viewing `http://localhost:8082`, source edits in `frontend/src` will not appear until you rebuild:
+
+```bash
+docker-compose up -d --build frontend
+```
 
 ## 💻 Local Development (Without Docker)
 
@@ -179,8 +187,8 @@ Frontend will be available at http://localhost:5173
 ### API Documentation
 
 Interactive API documentation is available at:
-- **Swagger UI**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
+- **Swagger UI**: http://localhost:8083/docs
+- **ReDoc**: http://localhost:8083/redoc
 
 ## 🗄️ Database Schema
 
@@ -216,12 +224,12 @@ DEBUG=True
 
 #### Frontend (.env.development)
 ```env
-VITE_API_URL=http://localhost:8000/api/v1
+VITE_API_URL=http://localhost:8083/api/v1
 ```
 
 ## 🧪 Testing the Application
 
-1. **Access the frontend**: http://localhost or http://localhost:3000
+1. **Access the frontend**: http://localhost:8082 or http://localhost:5173
 2. **View existing job postings** (if seeded)
 3. **Click "Add Job Posting"** to create a new posting
 4. **Fill out the 4-step form**
@@ -351,10 +359,15 @@ This project is part of the HRIS system development.
 - Verify DATABASE_URL in .env
 - Check logs: `docker-compose logs backend`
 
+### Frontend changes are not showing up
+- If you opened `http://localhost:8082`, you are using the built Docker frontend.
+- Rebuild it with `docker-compose up -d --build frontend`, or
+- Use hot reload instead: `docker-compose --profile dev up` and open `http://localhost:5173`
+
 ### Frontend can't connect to backend
 - Verify VITE_API_URL in .env.development
 - Check CORS settings in backend
-- Ensure backend is running on port 8000
+- Ensure backend is running on port 8083
 
 ### Database connection errors
 - Wait for PostgreSQL to fully start (healthcheck)
@@ -362,7 +375,7 @@ This project is part of the HRIS system development.
 - Verify postgres service is healthy: `docker-compose ps`
 
 ### Port conflicts
-- Check if ports 80, 3000, 5173, 8000, or 5432 are in use
+- Check if ports 5173, 5433, 8058, 8082, 8083, or 8084 are in use
 - Modify port mappings in docker-compose.yml if needed
 
 ## 📞 Support

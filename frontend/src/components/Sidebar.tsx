@@ -1,23 +1,23 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
-  LayoutDashboard,
-  Briefcase,
-  Users,
-  Calendar,
   BarChart3,
-  FileText,
-  Settings,
-  UserCircle2,
-  HelpCircle,
-  LogOut,
+  Briefcase,
+  Calendar,
   ChevronDown,
-  Search,
-  ClipboardList,
-  Target,
-  Sun,
-  Moon,
+  FileText,
+  HelpCircle,
+  LayoutDashboard,
+  LogOut,
   LucideIcon,
+  Moon,
+  Search,
+  Settings,
+  Target,
+  ClipboardList,
+  Sun,
+  UserCircle2,
+  Users,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -41,7 +41,6 @@ const Sidebar: React.FC<SidebarProps> = ({ onLogout }) => {
   const { user } = useAuth();
   const { darkMode, toggleTheme } = useTheme();
 
-  // Define all menu items with role access
   const allMenuItems: MenuItem[] = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard', roles: ['candidate', 'hr', 'admin'] },
     { id: 'jobs', label: 'Browse Jobs', icon: Search, path: '/jobs', roles: ['candidate'] },
@@ -55,85 +54,135 @@ const Sidebar: React.FC<SidebarProps> = ({ onLogout }) => {
     { id: 'reports', label: 'Reports', icon: FileText, path: '/reports', roles: ['hr', 'admin'] },
   ];
 
-  // Filter menu items based on user role
   const menuItems = useMemo(() => {
     const userRole = (user?.role || 'candidate') as UserRole;
-    return allMenuItems.filter(item => item.roles.includes(userRole));
+    return allMenuItems.filter((item) => item.roles.includes(userRole));
   }, [user?.role]);
 
+  const initials = user?.full_name
+    ?.split(' ')
+    .map((part) => part[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+
   return (
-    <div className="w-64 bg-[#0a2647] min-h-screen text-white flex flex-col">
-      {/* Logo/Header */}
-      <div className="p-6 border-b border-[#144272]">
-        <h1 className="text-xl font-bold">HRIS</h1>
+    <aside className="app-shell-sidebar w-72 min-h-screen flex-col hidden md:flex">
+      <div className="px-5 py-5 border-b" style={{ borderColor: 'var(--border)' }}>
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p
+              className="text-[11px] uppercase tracking-[0.22em] font-semibold"
+              style={{ color: 'var(--text-muted)' }}
+            >
+              HR Operations
+            </p>
+            <h1
+              className="mt-1 text-[22px] font-bold tracking-[-0.03em]"
+              style={{ color: 'var(--text-primary)' }}
+            >
+              HRIS
+            </h1>
+          </div>
+          <button
+            type="button"
+            onClick={toggleTheme}
+            className="sidebar-theme-toggle h-10 w-10 rounded-xl flex items-center justify-center transition-colors"
+            title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          >
+            {darkMode ? <Sun size={17} strokeWidth={1.8} /> : <Moon size={17} strokeWidth={1.8} />}
+          </button>
+        </div>
       </div>
 
-      {/* User Profile Dropdown */}
       {user && (
-        <div className="p-4 border-b border-[#144272]">
+        <div className="px-4 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
           <button
-            onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-            className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-[#144272] transition-colors"
+            type="button"
+            onClick={() => setIsUserMenuOpen((value) => !value)}
+            className="sidebar-user-card w-full rounded-2xl p-3 text-left transition-colors"
           >
-            <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center">
-              {user.profile_picture ? (
-                <img
-                  src={user.profile_picture}
-                  alt={user.full_name}
-                  className="w-10 h-10 rounded-full"
-                />
-              ) : (
-                <UserCircle2 size={24} />
-              )}
+            <div className="flex items-center gap-3">
+              <div className="h-11 w-11 rounded-full overflow-hidden flex items-center justify-center bg-[#d9efe0] text-[#166534] font-semibold text-sm">
+                {user.profile_picture ? (
+                  <img
+                    src={user.profile_picture}
+                    alt={user.full_name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  initials || <UserCircle2 size={20} strokeWidth={1.8} />
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
+                  {user.full_name}
+                </p>
+                <p className="text-xs capitalize truncate" style={{ color: 'var(--text-muted)' }}>
+                  {user.role}
+                </p>
+              </div>
+              <ChevronDown
+                size={16}
+                strokeWidth={1.8}
+                className={`transition-transform ${isUserMenuOpen ? 'rotate-180' : ''}`}
+                style={{ color: 'var(--text-muted)' }}
+              />
             </div>
-            <div className="flex-1 text-left">
-              <p className="text-sm font-medium">{user.full_name}</p>
-              <p className="text-xs text-gray-400">{user.role}</p>
-            </div>
-            <ChevronDown size={16} className={`transition-transform ${isUserMenuOpen ? 'rotate-180' : ''}`} />
           </button>
 
           {isUserMenuOpen && (
-            <div className="mt-2 bg-[#144272] rounded-lg overflow-hidden">
+            <div
+              className="sidebar-user-menu mt-2 overflow-hidden rounded-2xl border"
+            >
               <NavLink
                 to="/profile"
                 onClick={() => setIsUserMenuOpen(false)}
-                className="flex items-center gap-3 px-4 py-3 hover:bg-[#1a5490] transition-colors"
+                className="sidebar-user-menu-item flex items-center gap-3 px-4 py-3 text-sm transition-colors"
               >
-                <UserCircle2 size={18} />
-                <span className="text-sm">Profile</span>
+                <UserCircle2 size={17} strokeWidth={1.8} />
+                <span>Profile</span>
               </NavLink>
               <NavLink
                 to="/settings"
                 onClick={() => setIsUserMenuOpen(false)}
-                className="flex items-center gap-3 px-4 py-3 hover:bg-[#1a5490] transition-colors"
+                className="sidebar-user-menu-item flex items-center gap-3 px-4 py-3 text-sm transition-colors"
               >
-                <Settings size={18} />
-                <span className="text-sm">Settings</span>
+                <Settings size={17} strokeWidth={1.8} />
+                <span>Settings</span>
               </NavLink>
               <NavLink
                 to="/help"
                 onClick={() => setIsUserMenuOpen(false)}
-                className="flex items-center gap-3 px-4 py-3 hover:bg-[#1a5490] transition-colors"
+                className="sidebar-user-menu-item flex items-center gap-3 px-4 py-3 text-sm transition-colors"
               >
-                <HelpCircle size={18} />
-                <span className="text-sm">Help Center</span>
+                <HelpCircle size={17} strokeWidth={1.8} />
+                <span>Help Center</span>
               </NavLink>
               <button
+                type="button"
                 onClick={onLogout}
-                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[#1a5490] transition-colors text-left text-red-400"
+                className="sidebar-user-menu-item sidebar-user-menu-danger w-full flex items-center gap-3 px-4 py-3 text-left text-sm transition-colors"
               >
-                <LogOut size={18} />
-                <span className="text-sm">Sign Out</span>
+                <LogOut size={17} strokeWidth={1.8} />
+                <span>Sign Out</span>
               </button>
             </div>
           )}
         </div>
       )}
 
-      {/* Menu Items */}
-      <nav className="flex-1 p-4">
-        <ul className="space-y-2">
+      <div className="px-4 pt-5">
+        <p
+          className="px-3 text-[11px] uppercase tracking-[0.18em] font-semibold"
+          style={{ color: 'var(--text-muted)' }}
+        >
+          Workspace
+        </p>
+      </div>
+
+      <nav className="flex-1 px-4 py-3">
+        <ul className="space-y-1.5">
           {menuItems.map((item) => {
             const Icon = item.icon;
             return (
@@ -141,36 +190,36 @@ const Sidebar: React.FC<SidebarProps> = ({ onLogout }) => {
                 <NavLink
                   to={item.path}
                   className={({ isActive }) =>
-                    `w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                      isActive
-                        ? 'bg-blue-600 text-white'
-                        : 'text-gray-300 hover:bg-[#144272] hover:text-white'
+                    `sidebar-nav-link group flex items-center gap-3 rounded-2xl px-3 py-3 transition-all duration-150 ${
+                      isActive ? 'shadow-sm' : ''
                     }`
                   }
+                  style={({ isActive }) => ({
+                    backgroundColor: isActive ? 'var(--sidebar-active-bg)' : 'transparent',
+                    color: isActive ? 'var(--sidebar-active-text)' : 'var(--text-secondary)',
+                    border: isActive ? '1px solid var(--sidebar-active-border)' : '1px solid transparent',
+                    boxShadow: isActive ? 'var(--sidebar-active-shadow)' : 'none',
+                  })}
                 >
-                  <Icon size={20} />
-                  <span className="font-medium">{item.label}</span>
+                  {({ isActive }) => (
+                    <>
+                      <div
+                        className={`h-9 w-9 rounded-xl flex items-center justify-center transition-colors ${
+                          isActive ? 'app-icon-chip-active' : 'app-icon-chip'
+                        }`}
+                      >
+                        <Icon size={17} strokeWidth={1.8} />
+                      </div>
+                      <span className="text-sm font-medium tracking-[-0.01em]">{item.label}</span>
+                    </>
+                  )}
                 </NavLink>
               </li>
             );
           })}
         </ul>
       </nav>
-
-      {/* Theme Toggle — bottom of sidebar */}
-      <div className="px-4 py-3 border-t border-[#144272]">
-        <button
-          onClick={toggleTheme}
-          className="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-[#144272] transition-colors text-gray-300 hover:text-white"
-          title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-        >
-          {darkMode ? <Sun size={18} /> : <Moon size={18} />}
-          <span className="text-sm font-medium">
-            {darkMode ? 'Light Mode' : 'Dark Mode'}
-          </span>
-        </button>
-      </div>
-    </div>
+    </aside>
   );
 };
 
