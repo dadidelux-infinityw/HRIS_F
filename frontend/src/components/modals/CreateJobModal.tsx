@@ -191,8 +191,8 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
           </div>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <div className="px-8 py-8 min-h-[360px]">
+        <form onSubmit={handleSubmit} className="job-modal-form flex flex-col flex-1 min-h-0">
+          <div className="job-modal-body flex-1 overflow-y-auto px-8 py-8">
             {currentStep === 1 && (
               <div className="space-y-5">
                 <datalist id="jobTitleOptions">
@@ -429,7 +429,7 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
             )}
           </div>
 
-          <div className="flex justify-between items-center px-8 py-6 border-t" style={{ borderColor: 'var(--border)' }}>
+          <div className="job-modal-footer flex-shrink-0 flex justify-between items-center px-8 py-6 border-t" style={{ borderColor: 'var(--border)' }}>
             <button
               type="button"
               onClick={handlePrevious}

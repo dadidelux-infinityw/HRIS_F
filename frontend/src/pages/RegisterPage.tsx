@@ -40,10 +40,15 @@ const RegisterPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--bg-secondary)' }}>
-      <div className="max-w-md w-full mx-4">
+    <div className="app-bg-watermark min-h-screen flex items-center justify-center px-4 py-10" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+      <div className="max-w-md w-full">
         <div className="rounded-lg shadow-lg p-8" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)' }}>
           <div className="text-center mb-8">
+            <img
+              src="/branding/nu-logo.png"
+              alt="National University"
+              className="h-16 w-auto mx-auto mb-4"
+            />
             <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Create an account</h1>
             <p className="mt-2" style={{ color: 'var(--text-muted)' }}>Enter your details to get started</p>
           </div>

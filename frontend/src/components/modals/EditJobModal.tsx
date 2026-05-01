@@ -77,7 +77,7 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-content job-modal-shell" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b border-gray-200">
           <h2 className="text-xl font-semibold text-gray-900">Edit Job Posting</h2>
@@ -145,8 +145,8 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
         </datalist>
 
         {/* Form */}
-        <form onSubmit={handleSubmit}>
-          <div className="p-6 space-y-4 max-h-[65vh] overflow-y-auto">
+        <form onSubmit={handleSubmit} className="job-modal-form flex flex-col flex-1 min-h-0">
+          <div className="job-modal-body flex-1 overflow-y-auto p-6 space-y-4">
             {/* Job Title */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -301,7 +301,7 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
           </div>
 
           {/* Footer */}
-          <div className="flex justify-end gap-3 p-6 border-t border-gray-200">
+          <div className="job-modal-footer flex-shrink-0 flex justify-end gap-3 p-6 border-t border-gray-200">
             <button type="button" onClick={onClose} className="btn-secondary">
               Cancel
             </button>

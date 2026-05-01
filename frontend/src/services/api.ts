@@ -55,6 +55,10 @@ export interface LoginResponse {
   token_type: string;
 }
 
+export interface MessageResponse {
+  message: string;
+}
+
 export interface DashboardStats {
   total_users: number;
   total_job_postings: number;
@@ -468,6 +472,28 @@ class ApiService {
     const response = await fetch(`${this.baseUrl}/auth/logout`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse(response);
+  }
+
+  async forgotPassword(email: string): Promise<MessageResponse> {
+    const response = await fetch(`${this.baseUrl}/auth/forgot-password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email }),
+    });
+    return this.handleResponse(response);
+  }
+
+  async resetPassword(token: string, newPassword: string): Promise<MessageResponse> {
+    const response = await fetch(`${this.baseUrl}/auth/reset-password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ token, new_password: newPassword }),
     });
     return this.handleResponse(response);
   }

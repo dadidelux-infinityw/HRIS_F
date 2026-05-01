@@ -1,5 +1,16 @@
 import React, { useState } from 'react';
-import { ChevronDown, ChevronUp, User } from 'lucide-react';
+import {
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  ClipboardList,
+  LucideIcon,
+  Mail,
+  Presentation,
+  Rocket,
+  User,
+  Users,
+} from 'lucide-react';
 import { RecruitmentPhase, RecruitmentStage, RECRUITMENT_STAGES } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
 
@@ -12,6 +23,7 @@ interface PhaseConfig {
   dark: { bg: string; border: string; text: string };
   badgeBg: string;
   dot: string;
+  icon: LucideIcon;
 }
 
 const PHASE_COLORS: Record<string, PhaseConfig> = {
@@ -19,31 +31,37 @@ const PHASE_COLORS: Record<string, PhaseConfig> = {
     light: { bg: '#eff6ff', border: '#bfdbfe', text: '#1d4ed8' },
     dark:  { bg: '#1e3a5f', border: '#3b82f6', text: '#93c5fd' },
     badgeBg: '#3b82f6', dot: '#3b82f6',
+    icon: ClipboardList,
   },
   'Teaching Demo': {
     light: { bg: '#faf5ff', border: '#e9d5ff', text: '#7c3aed' },
     dark:  { bg: '#2e1a47', border: '#8b5cf6', text: '#c4b5fd' },
     badgeBg: '#8b5cf6', dot: '#8b5cf6',
+    icon: Presentation,
   },
   'Interview': {
     light: { bg: '#fffbeb', border: '#fcd34d', text: '#92400e' },
     dark:  { bg: '#3d2a00', border: '#f59e0b', text: '#fcd34d' },
     badgeBg: '#f59e0b', dot: '#f59e0b',
+    icon: Users,
   },
   'Final Selection': {
     light: { bg: '#fff7ed', border: '#fdba74', text: '#c2410c' },
     dark:  { bg: '#3d1a00', border: '#f97316', text: '#fdba74' },
     badgeBg: '#f97316', dot: '#f97316',
+    icon: CheckCircle2,
   },
   'Job Offer': {
     light: { bg: '#f0fdf4', border: '#86efac', text: '#15803d' },
     dark:  { bg: '#14532d', border: '#22c55e', text: '#86efac' },
     badgeBg: '#22c55e', dot: '#22c55e',
+    icon: Mail,
   },
   'Onboarding': {
     light: { bg: '#f0fdfa', border: '#5eead4', text: '#0f766e' },
     dark:  { bg: '#134e4a', border: '#14b8a6', text: '#5eead4' },
     badgeBg: '#14b8a6', dot: '#14b8a6',
+    icon: Rocket,
   },
 };
 
@@ -73,6 +91,7 @@ const RecruitmentPhasesSection: React.FC<Props> = ({ phases }) => {
           const cfg = PHASE_COLORS[stageName];
           const palette = darkMode ? cfg.dark : cfg.light;
           const isExpanded = expandedPhase === stageName;
+          const Icon = cfg.icon;
 
           return (
             <button
@@ -86,6 +105,7 @@ const RecruitmentPhasesSection: React.FC<Props> = ({ phases }) => {
                 color: palette.text,
               }}
             >
+              <Icon size={22} className="mb-1" style={{ color: palette.text }} />
               <span className="text-3xl font-bold" style={{ color: palette.text }}>{count}</span>
               <span className="text-xs font-medium mt-1 leading-tight">{stageName}</span>
               {isExpanded ? (

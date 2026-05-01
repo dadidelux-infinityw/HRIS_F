@@ -17,6 +17,23 @@ class Settings(BaseSettings):
     JWT_SECRET_KEY: str = "your-secret-key-change-this-in-production-min-32-chars"
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    PASSWORD_RESET_EXPIRE_MINUTES: int = 30
+
+    # Frontend and email delivery
+    FRONTEND_URL: str = "http://localhost:5173"
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM: str = ""
+    DEBUG_EMAIL: bool = True
+
+    # OAuth (Google / LinkedIn)
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
+    LINKEDIN_CLIENT_ID: str = ""
+    LINKEDIN_CLIENT_SECRET: str = ""
+    OAUTH_REDIRECT_BASE: str = "http://localhost:8000/api/v1"
 
     # Gemini API (Resume Parsing)
     GEMINI_API_KEY: str = ""

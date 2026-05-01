@@ -19,3 +19,16 @@ class RegisterRequest(BaseModel):
     email: EmailStr
     password: str
     full_name: str
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
+
+class MessageResponse(BaseModel):
+    message: str

@@ -70,19 +70,26 @@ const Sidebar: React.FC<SidebarProps> = ({ onLogout }) => {
     <aside className="app-shell-sidebar w-72 min-h-screen flex-col hidden md:flex">
       <div className="px-5 py-5 border-b" style={{ borderColor: 'var(--border)' }}>
         <div className="flex items-center justify-between gap-3">
-          <div>
-            <p
-              className="text-[11px] uppercase tracking-[0.22em] font-semibold"
-              style={{ color: 'var(--text-muted)' }}
-            >
-              HR Operations
-            </p>
-            <h1
-              className="mt-1 text-[22px] font-bold tracking-[-0.03em]"
-              style={{ color: 'var(--text-primary)' }}
-            >
-              HRIS
-            </h1>
+          <div className="flex items-center gap-3 min-w-0">
+            <img
+              src="/branding/nu-logo.png"
+              alt="National University"
+              className="h-10 w-auto flex-shrink-0"
+            />
+            <div className="min-w-0">
+              <p
+                className="text-[11px] uppercase tracking-[0.22em] font-semibold"
+                style={{ color: 'var(--text-muted)' }}
+              >
+                HR Operations
+              </p>
+              <h1
+                className="mt-1 text-[22px] font-bold tracking-[-0.03em]"
+                style={{ color: 'var(--text-primary)' }}
+              >
+                HRIS
+              </h1>
+            </div>
           </div>
           <button
             type="button"
@@ -137,7 +144,6 @@ const Sidebar: React.FC<SidebarProps> = ({ onLogout }) => {
             >
               <NavLink
                 to="/profile"
-                onClick={() => setIsUserMenuOpen(false)}
                 className="sidebar-user-menu-item flex items-center gap-3 px-4 py-3 text-sm transition-colors"
               >
                 <UserCircle2 size={17} strokeWidth={1.8} />
@@ -145,7 +151,6 @@ const Sidebar: React.FC<SidebarProps> = ({ onLogout }) => {
               </NavLink>
               <NavLink
                 to="/settings"
-                onClick={() => setIsUserMenuOpen(false)}
                 className="sidebar-user-menu-item flex items-center gap-3 px-4 py-3 text-sm transition-colors"
               >
                 <Settings size={17} strokeWidth={1.8} />
@@ -153,7 +158,6 @@ const Sidebar: React.FC<SidebarProps> = ({ onLogout }) => {
               </NavLink>
               <NavLink
                 to="/help"
-                onClick={() => setIsUserMenuOpen(false)}
                 className="sidebar-user-menu-item flex items-center gap-3 px-4 py-3 text-sm transition-colors"
               >
                 <HelpCircle size={17} strokeWidth={1.8} />
