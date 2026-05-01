@@ -97,9 +97,9 @@ const LoginPage: React.FC = () => {
                 <label className="block text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
                   Password
                 </label>
-                <Link to="/forgot-password" className="text-sm text-blue-600 hover:text-blue-700">
+                {/* <Link to="/forgot-password" className="text-sm text-blue-600 hover:text-blue-700">
                   Forgot password?
-                </Link>
+                </Link> */}
               </div>
               <input
                 type="password"
