@@ -58,6 +58,15 @@ def _ensure_missing_columns():
                 conn.execute(text(
                     "CREATE INDEX IF NOT EXISTS ix_users_oauth_subject ON users (oauth_subject)"
                 ))
+        # users.notify_email, users.notify_in_app (notification preferences)
+        for pref_col in ('notify_email', 'notify_in_app'):
+            if pref_col not in existing:
+                logger.info("Adding missing column users.%s", pref_col)
+                with engine.begin() as conn:
+                    conn.execute(text(
+                        f"ALTER TABLE users ADD COLUMN {pref_col} "
+                        "BOOLEAN NOT NULL DEFAULT TRUE"
+                    ))
         # Make hashed_password nullable for OAuth-only users
         try:
             with engine.begin() as conn:

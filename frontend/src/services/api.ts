@@ -445,6 +445,11 @@ export interface UnreadCountResponse {
   count: number;
 }
 
+export interface NotificationPreferences {
+  notify_email: boolean;
+  notify_in_app: boolean;
+}
+
 class ApiService {
   private baseUrl: string;
 
@@ -987,6 +992,24 @@ class ApiService {
     const response = await fetch(`${this.baseUrl}/notifications/read-all`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse(response);
+  }
+
+  async getNotificationPreferences(): Promise<NotificationPreferences> {
+    const response = await fetch(`${this.baseUrl}/notifications/preferences`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse(response);
+  }
+
+  async updateNotificationPreferences(
+    data: Partial<NotificationPreferences>
+  ): Promise<NotificationPreferences> {
+    const response = await fetch(`${this.baseUrl}/notifications/preferences`, {
+      method: 'PUT',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(data),
     });
     return this.handleResponse(response);
   }

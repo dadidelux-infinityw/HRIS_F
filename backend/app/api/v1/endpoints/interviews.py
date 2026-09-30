@@ -1,7 +1,7 @@
 """
 Interview management endpoints
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
 from datetime import date
@@ -23,7 +23,7 @@ from app.services.notifications import notify
 router = APIRouter()
 
 
-def _notify_candidate(db, application, current_user, type, title, message):
+def _notify_candidate(db, application, current_user, type, title, message, background_tasks=None, email=True):
     """Notify the applicant about an interview change made by someone else."""
     if not application or application.user_id == current_user.id:
         return
@@ -34,6 +34,8 @@ def _notify_candidate(db, application, current_user, type, title, message):
         title=title,
         message=message,
         link="/my-interviews",
+        email=email,
+        background_tasks=background_tasks,
     )
 
 
@@ -143,6 +145,7 @@ def get_interview(
 @router.post("/", response_model=InterviewResponse, status_code=status.HTTP_201_CREATED)
 def create_interview(
     interview_data: InterviewCreate,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -188,6 +191,7 @@ def create_interview(
         NotificationType.INTERVIEW_SCHEDULED,
         "Interview scheduled",
         f"Your interview for {_interview_label(new_interview, application)} has been scheduled.",
+        background_tasks,
     )
     db.commit()
     db.refresh(new_interview)
@@ -199,6 +203,7 @@ def create_interview(
 def update_interview(
     interview_id: str,
     interview_data: InterviewUpdate,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -249,6 +254,7 @@ def update_interview(
             NotificationType.INTERVIEW_CANCELLED,
             "Interview cancelled",
             f"Your interview for {label} has been cancelled.",
+            background_tasks,
         )
     elif interview.status != old_status and interview.status == InterviewStatus.COMPLETED:
         _notify_candidate(
@@ -256,6 +262,7 @@ def update_interview(
             NotificationType.INTERVIEW_UPDATED,
             "Interview completed",
             f"Your interview for {label} has been marked as completed.",
+            email=False,
         )
     elif (
         interview.interview_date != old_date
@@ -267,6 +274,7 @@ def update_interview(
             NotificationType.INTERVIEW_UPDATED,
             "Interview rescheduled",
             f"Your interview has been rescheduled to {label}.",
+            background_tasks,
         )
 
     db.commit()
@@ -278,6 +286,7 @@ def update_interview(
 @router.delete("/{interview_id}")
 def delete_interview(
     interview_id: str,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -303,6 +312,7 @@ def delete_interview(
             NotificationType.INTERVIEW_CANCELLED,
             "Interview cancelled",
             f"Your interview for {_interview_label(interview, interview.application)} has been cancelled.",
+            background_tasks,
         )
     db.commit()
 

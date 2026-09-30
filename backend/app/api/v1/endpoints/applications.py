@@ -1,7 +1,7 @@
 """
 Application management endpoints
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
 from datetime import datetime
@@ -22,7 +22,7 @@ from app.services.notifications import notify
 router = APIRouter()
 
 
-def _notify_candidate_of_change(db, application, current_user, type, title, change):
+def _notify_candidate_of_change(db, application, current_user, type, title, change, background_tasks=None):
     """Notify the applicant about a change made by someone else (HR/Admin)."""
     if application.user_id == current_user.id:
         return
@@ -34,6 +34,8 @@ def _notify_candidate_of_change(db, application, current_user, type, title, chan
         title=title,
         message=f"Your application for {job_title}: {change}.",
         link="/my-applications",
+        email=True,
+        background_tasks=background_tasks,
     )
 
 
@@ -191,6 +193,7 @@ def create_application(
 def update_application(
     application_id: str,
     application_data: ApplicationUpdate,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -254,6 +257,7 @@ def update_application(
                 NotificationType.STATUS_CHANGED,
                 "Application status updated",
                 f"status changed to {new_status.value}",
+                background_tasks,
             )
         except ValueError:
             raise HTTPException(
@@ -275,6 +279,7 @@ def update_application(
                 NotificationType.STAGE_CHANGED,
                 "Recruitment stage updated",
                 f"moved to the {application_data.recruitment_stage} stage",
+                background_tasks,
             )
         application.recruitment_stage = application_data.recruitment_stage
 
