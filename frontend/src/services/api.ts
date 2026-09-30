@@ -317,6 +317,19 @@ export interface RankedCandidate {
   skills: string[];
   has_resume: boolean;
   scores: CandidateMatchScore;
+  // Present when the candidate has a non-withdrawn application for this job
+  application_id?: string | null;
+  application_status?: string | null;
+  recruitment_stage?: string | null;
+  applied_date?: string | null;
+}
+
+export type MatchingScope = 'all' | 'applied' | 'shortlisted';
+
+export interface MatchingScopeCounts {
+  all: number;
+  applied: number;
+  shortlisted: number;
 }
 
 export interface JobMatchingResponse {
@@ -325,6 +338,7 @@ export interface JobMatchingResponse {
   requirements: string[];
   total_candidates: number;
   ranked_candidates: RankedCandidate[];
+  counts: MatchingScopeCounts;
   computed_at: string;
 }
 
@@ -843,9 +857,13 @@ class ApiService {
   }
 
   // Candidate matching methods
-  async getMatchingCandidates(jobId: string, minScore = 0): Promise<JobMatchingResponse> {
+  async getMatchingCandidates(
+    jobId: string,
+    minScore = 0,
+    scope: MatchingScope = 'all'
+  ): Promise<JobMatchingResponse> {
     const response = await fetch(
-      `${this.baseUrl}/matching/candidates/${jobId}?min_score=${minScore}`,
+      `${this.baseUrl}/matching/candidates/${jobId}?min_score=${minScore}&scope=${scope}`,
       { headers: this.getAuthHeaders() }
     );
     return this.handleResponse(response);

@@ -198,7 +198,9 @@ def update_application(
     db: Session = Depends(get_db)
 ):
     """
-    Update an application (for HR/Admin to change status or candidate to update cover letter)
+    Update an application
+    - HR/Admin: change status and recruitment stage
+    - Candidates: own application only; edit cover letter or withdraw
     """
     application = db.query(Application).filter(
         Application.id == application_id
@@ -210,12 +212,31 @@ def update_application(
             detail="Application not found"
         )
 
-    # Candidates can only update their own applications
-    if current_user.role.value == "candidate" and application.user_id != current_user.id:
+    is_hr_or_admin = current_user.role.value in ("hr", "admin")
+
+    # Non-HR users can only update their own applications
+    if not is_hr_or_admin and application.user_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You can only update your own applications"
         )
+
+    # Status and stage changes are HR/Admin only; candidates may only withdraw
+    if not is_hr_or_admin:
+        status_changing = (
+            application_data.status
+            and application_data.status != application.status.value
+        )
+        if status_changing and application_data.status != ApplicationStatus.WITHDRAWN.value:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only HR or Admin can change the application status"
+            )
+        if application_data.recruitment_stage is not None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only HR or Admin can change the recruitment stage"
+            )
 
     # Update status if changed
     if application_data.status and application_data.status != application.status.value:

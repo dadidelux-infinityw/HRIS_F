@@ -143,13 +143,13 @@ const NotificationBell: React.FC = () => {
       <button
         type="button"
         onClick={toggleOpen}
-        className="sidebar-theme-toggle relative h-10 w-10 rounded-xl flex items-center justify-center transition-colors"
+        className="sidebar-theme-toggle relative h-8 w-8 rounded-lg flex items-center justify-center transition-colors"
         title="Notifications"
         aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
         aria-haspopup="true"
         aria-expanded={isOpen}
       >
-        <Bell size={17} strokeWidth={1.8} />
+        <Bell size={15} strokeWidth={1.8} />
         {unreadCount > 0 && (
           <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] font-semibold leading-[18px] text-center">
             {badgeLabel}
