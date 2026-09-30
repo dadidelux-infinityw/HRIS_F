@@ -2,9 +2,9 @@
 Pydantic schemas for candidate-job matching endpoints
 """
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 from uuid import UUID
-from datetime import datetime
+from datetime import date, datetime
 
 
 class CandidateMatchScore(BaseModel):
@@ -20,6 +20,17 @@ class RankedCandidate(BaseModel):
     skills: List[str]
     has_resume: bool
     scores: CandidateMatchScore
+    # Populated when the candidate has a non-withdrawn application for this job
+    application_id: Optional[UUID] = None
+    application_status: Optional[str] = None
+    recruitment_stage: Optional[str] = None
+    applied_date: Optional[date] = None
+
+
+class MatchingScopeCounts(BaseModel):
+    all: int
+    applied: int
+    shortlisted: int
 
 
 class JobMatchingResponse(BaseModel):
@@ -28,6 +39,7 @@ class JobMatchingResponse(BaseModel):
     requirements: List[str]
     total_candidates: int
     ranked_candidates: List[RankedCandidate]
+    counts: MatchingScopeCounts
     computed_at: datetime
 
 
