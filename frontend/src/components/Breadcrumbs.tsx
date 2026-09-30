@@ -48,7 +48,8 @@ const Breadcrumbs: React.FC = () => {
       {crumbs.map((crumb, index) => {
         const isLast = index === crumbs.length - 1;
         return (
-          <React.Fragment key={crumb.path}>
+          // Home and Dashboard share /dashboard, so the path alone isn't a unique key
+          <React.Fragment key={`${index}-${crumb.path}`}>
             {index > 0 && (
               <ChevronRight size={13} strokeWidth={1.8} style={{ color: '#c0c7d1', flexShrink: 0 }} />
             )}
