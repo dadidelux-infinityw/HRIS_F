@@ -6,6 +6,8 @@ import {
   Download,
   FileText,
   Loader2,
+  Star,
+  StarOff,
   Target,
   Trash2,
   Zap,
@@ -26,6 +28,9 @@ const SCOPE_TABS: { id: MatchingScope; label: string }[] = [
   { id: 'shortlisted', label: 'Shortlisted' },
 ];
 
+// Mirrors SHORTLISTED_STATUSES in backend/app/api/v1/endpoints/matching.py
+const SHORTLISTED_STATUSES = ['In-Process', 'Accepted'];
+
 const EMPTY_MESSAGES: Record<MatchingScope, string> = {
   all: 'No candidates meet the minimum score threshold.',
   applied: 'No applicants for this job meet the minimum score threshold.',
@@ -44,6 +49,7 @@ const CandidateMatchingPage: React.FC = () => {
   const [error, setError] = useState('');
   const [statusMsg, setStatusMsg] = useState('');
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [shortlistingId, setShortlistingId] = useState<string | null>(null);
 
   useEffect(() => {
     apiService.getAllJobPostings().then(setJobs).catch(() => {});
@@ -112,6 +118,69 @@ const CandidateMatchingPage: React.FC = () => {
     if (nextScope === scope) return;
     setScope(nextScope);
     if (result) loadResults(nextScope, true);
+  };
+
+  const handleShortlist = async (candidate: RankedCandidate, shortlist: boolean) => {
+    if (!candidate.application_id) return;
+    setShortlistingId(candidate.application_id);
+    setError('');
+    setStatusMsg('');
+
+    try {
+      await apiService.updateApplication(
+        candidate.application_id,
+        shortlist
+          ? { status: 'In-Process', recruitment_stage: 'Initial Screening', note: 'Shortlisted from Candidate Matching' }
+          : { status: 'Pending', note: 'Removed from shortlist in Candidate Matching' }
+      );
+      // Refresh the current tab so the list and counts reflect the change
+      await loadResults(scope, true);
+      setStatusMsg(
+        shortlist
+          ? `${candidate.full_name} added to the shortlist.`
+          : `${candidate.full_name} removed from the shortlist.`
+      );
+    } catch (e: any) {
+      setError(e.message || 'Failed to update shortlist.');
+    } finally {
+      setShortlistingId(null);
+    }
+  };
+
+  const shortlistAction = (candidate: RankedCandidate) => {
+    if (!candidate.application_id || !candidate.application_status) return null;
+
+    const isShortlisted = SHORTLISTED_STATUSES.includes(candidate.application_status);
+    // Accepted applications are past the shortlist step, so they aren't reverted from here
+    if (candidate.application_status === 'Accepted') return null;
+
+    const busy = shortlistingId === candidate.application_id;
+    return (
+      <button
+        type="button"
+        onClick={() => handleShortlist(candidate, !isShortlisted)}
+        disabled={shortlistingId !== null || loading}
+        className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl transition-colors disabled:opacity-50"
+        style={
+          isShortlisted
+            ? {
+                border: darkMode ? '1px solid rgba(248, 113, 113, 0.26)' : '1px solid rgba(240, 68, 56, 0.18)',
+                color: darkMode ? '#f87171' : '#d92d20',
+                backgroundColor: darkMode ? 'rgba(127, 29, 29, 0.08)' : '#fef3f2',
+              }
+            : { background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)', color: '#1f2937' }
+        }
+      >
+        {busy ? (
+          <Loader2 size={13} className="animate-spin" />
+        ) : isShortlisted ? (
+          <StarOff size={13} />
+        ) : (
+          <Star size={13} />
+        )}
+        {isShortlisted ? 'Remove from shortlist' : 'Shortlist'}
+      </button>
+    );
   };
 
   const handlePrecompute = async () => {
@@ -442,6 +511,7 @@ const CandidateMatchingPage: React.FC = () => {
               <div className="flex flex-col gap-3">
                 {result.ranked_candidates.map((candidate: RankedCandidate, index: number) => {
                   const expanded = expandedIds.has(candidate.user_id);
+                  const action = shortlistAction(candidate);
 
                   return (
                     <div key={candidate.user_id} className="rounded-[24px] p-5" style={panelStyle}>
@@ -510,6 +580,8 @@ const CandidateMatchingPage: React.FC = () => {
                               </button>
                             )}
                           </div>
+
+                          {action && <div className="flex flex-wrap gap-2 mt-3">{action}</div>}
                         </div>
 
                         <div className="flex-shrink-0 w-52 mt-1">
