@@ -9,7 +9,12 @@ from uuid import UUID
 from app.db.database import get_db
 from app.models.user import User
 from app.models.notification import Notification
-from app.schemas.notification import NotificationResponse, UnreadCountResponse
+from app.schemas.notification import (
+    NotificationResponse,
+    UnreadCountResponse,
+    NotificationPreferences,
+    NotificationPreferencesUpdate,
+)
 from app.core.dependencies import get_current_user
 
 router = APIRouter()
@@ -40,6 +45,29 @@ def get_unread_count(
         Notification.is_read.is_(False)
     ).count()
     return {"count": count}
+
+
+@router.get("/preferences", response_model=NotificationPreferences)
+def get_notification_preferences(
+    current_user: User = Depends(get_current_user)
+):
+    """Get the current user's notification preferences"""
+    return current_user
+
+
+@router.put("/preferences", response_model=NotificationPreferences)
+def update_notification_preferences(
+    preferences: NotificationPreferencesUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Update the current user's notification preferences"""
+    for field, value in preferences.model_dump(exclude_unset=True).items():
+        if value is not None:
+            setattr(current_user, field, value)
+    db.commit()
+    db.refresh(current_user)
+    return current_user
 
 
 @router.patch("/{notification_id}/read", response_model=NotificationResponse)

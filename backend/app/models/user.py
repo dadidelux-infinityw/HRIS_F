@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, Enum, LargeBinary
+from sqlalchemy import Column, String, DateTime, Enum, LargeBinary, Boolean, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -28,6 +28,8 @@ class User(Base):
     is_active = Column(String(10), default="true", nullable=False)
     oauth_provider = Column(String(50), nullable=True)
     oauth_subject = Column(String(255), nullable=True, index=True)
+    notify_email = Column(Boolean, default=True, server_default=text("true"), nullable=False)
+    notify_in_app = Column(Boolean, default=True, server_default=text("true"), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 

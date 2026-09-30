@@ -22,3 +22,16 @@ class NotificationResponse(BaseModel):
 
 class UnreadCountResponse(BaseModel):
     count: int
+
+
+class NotificationPreferences(BaseModel):
+    notify_email: bool
+    notify_in_app: bool
+
+    class Config:
+        from_attributes = True
+
+
+class NotificationPreferencesUpdate(BaseModel):
+    notify_email: Optional[bool] = None
+    notify_in_app: Optional[bool] = None
