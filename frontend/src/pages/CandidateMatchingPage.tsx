@@ -6,6 +6,8 @@ import {
   Download,
   FileText,
   Loader2,
+  Star,
+  StarOff,
   Target,
   Trash2,
   Zap,
@@ -14,22 +16,40 @@ import {
   apiService,
   JobPosting,
   JobMatchingResponse,
+  MatchingScope,
   RankedCandidate,
 } from '../services/api';
 import MatchScoreBar from '../components/matching/MatchScoreBar';
 import { useTheme } from '../contexts/ThemeContext';
+
+const SCOPE_TABS: { id: MatchingScope; label: string }[] = [
+  { id: 'all', label: 'All' },
+  { id: 'applied', label: 'Applied' },
+  { id: 'shortlisted', label: 'Shortlisted' },
+];
+
+// Mirrors SHORTLISTED_STATUSES in backend/app/api/v1/endpoints/matching.py
+const SHORTLISTED_STATUSES = ['In-Process', 'Accepted'];
+
+const EMPTY_MESSAGES: Record<MatchingScope, string> = {
+  all: 'No candidates meet the minimum score threshold.',
+  applied: 'No applicants for this job meet the minimum score threshold.',
+  shortlisted: 'No shortlisted applicants for this job meet the minimum score threshold.',
+};
 
 const CandidateMatchingPage: React.FC = () => {
   const { darkMode } = useTheme();
   const [jobs, setJobs] = useState<JobPosting[]>([]);
   const [selectedJobId, setSelectedJobId] = useState('');
   const [minScore, setMinScore] = useState(0);
+  const [scope, setScope] = useState<MatchingScope>('all');
   const [result, setResult] = useState<JobMatchingResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<'precompute' | 'clear' | null>(null);
   const [error, setError] = useState('');
   const [statusMsg, setStatusMsg] = useState('');
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [shortlistingId, setShortlistingId] = useState<string | null>(null);
 
   useEffect(() => {
     apiService.getAllJobPostings().then(setJobs).catch(() => {});
@@ -49,13 +69,15 @@ const CandidateMatchingPage: React.FC = () => {
     if (!result) return;
 
     const rows = [
-      ['Rank', 'Full Name', 'Email', 'Skills', 'Has Resume', 'Total Score (%)', 'Similar Skills Set Score', 'Job Match Score'],
+      ['Rank', 'Full Name', 'Email', 'Skills', 'Has Resume', 'Status', 'Stage', 'Total Score (%)', 'Similar Skills Set Score', 'Job Match Score'],
       ...result.ranked_candidates.map((c, i) => [
         i + 1,
         c.full_name,
         c.email,
         `"${c.skills.join('; ')}"`,
         c.has_resume ? 'Yes' : 'No',
+        c.application_status || 'Not Applied',
+        c.recruitment_stage || '',
         c.scores.total_score.toFixed(1),
         (c.scores.semantic_score * 100).toFixed(1),
         (c.scores.keyword_score * 100).toFixed(1),
@@ -67,26 +89,98 @@ const CandidateMatchingPage: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `matching_${result.job_title.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `matching_${result.job_title.replace(/\s+/g, '_')}_${scope}_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
 
-  const handleMatch = async () => {
+  // keepResult leaves the current list visible while a tab switch reloads
+  const loadResults = async (nextScope: MatchingScope, keepResult = false) => {
     if (!selectedJobId) return;
     setLoading(true);
     setError('');
     setStatusMsg('');
-    setResult(null);
+    if (!keepResult) setResult(null);
 
     try {
-      const data = await apiService.getMatchingCandidates(selectedJobId, minScore);
+      const data = await apiService.getMatchingCandidates(selectedJobId, minScore, nextScope);
       setResult(data);
     } catch (e: any) {
       setError(e.message || 'Failed to match candidates.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleMatch = () => loadResults(scope);
+
+  const handleScopeChange = (nextScope: MatchingScope) => {
+    if (nextScope === scope) return;
+    setScope(nextScope);
+    if (result) loadResults(nextScope, true);
+  };
+
+  const handleShortlist = async (candidate: RankedCandidate, shortlist: boolean) => {
+    if (!candidate.application_id) return;
+    setShortlistingId(candidate.application_id);
+    setError('');
+    setStatusMsg('');
+
+    try {
+      await apiService.updateApplication(
+        candidate.application_id,
+        shortlist
+          ? { status: 'In-Process', recruitment_stage: 'Initial Screening', note: 'Shortlisted from Candidate Matching' }
+          : { status: 'Pending', note: 'Removed from shortlist in Candidate Matching' }
+      );
+      // Refresh the current tab so the list and counts reflect the change
+      await loadResults(scope, true);
+      setStatusMsg(
+        shortlist
+          ? `${candidate.full_name} added to the shortlist.`
+          : `${candidate.full_name} removed from the shortlist.`
+      );
+    } catch (e: any) {
+      setError(e.message || 'Failed to update shortlist.');
+    } finally {
+      setShortlistingId(null);
+    }
+  };
+
+  const shortlistAction = (candidate: RankedCandidate) => {
+    if (!candidate.application_id || !candidate.application_status) return null;
+
+    const isShortlisted = SHORTLISTED_STATUSES.includes(candidate.application_status);
+    // Accepted applications are past the shortlist step, so they aren't reverted from here
+    if (candidate.application_status === 'Accepted') return null;
+
+    const busy = shortlistingId === candidate.application_id;
+    return (
+      <button
+        type="button"
+        onClick={() => handleShortlist(candidate, !isShortlisted)}
+        disabled={shortlistingId !== null || loading}
+        className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl transition-colors disabled:opacity-50"
+        style={
+          isShortlisted
+            ? {
+                border: darkMode ? '1px solid rgba(248, 113, 113, 0.26)' : '1px solid rgba(240, 68, 56, 0.18)',
+                color: darkMode ? '#f87171' : '#d92d20',
+                backgroundColor: darkMode ? 'rgba(127, 29, 29, 0.08)' : '#fef3f2',
+              }
+            : { background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)', color: '#1f2937' }
+        }
+      >
+        {busy ? (
+          <Loader2 size={13} className="animate-spin" />
+        ) : isShortlisted ? (
+          <StarOff size={13} />
+        ) : (
+          <Star size={13} />
+        )}
+        {isShortlisted ? 'Remove from shortlist' : 'Shortlist'}
+      </button>
+    );
   };
 
   const handlePrecompute = async () => {
@@ -153,6 +247,35 @@ const CandidateMatchingPage: React.FC = () => {
     );
   };
 
+  const statusBadge = (candidate: RankedCandidate) => {
+    if (!candidate.application_status) return null;
+
+    const palette: Record<string, { color: string; bg: string; border: string }> = darkMode
+      ? {
+          Pending: { color: '#93c5fd', bg: 'rgba(59, 130, 246, 0.12)', border: 'rgba(59, 130, 246, 0.2)' },
+          'In-Process': { color: '#c4b5fd', bg: 'rgba(139, 92, 246, 0.12)', border: 'rgba(139, 92, 246, 0.2)' },
+          Accepted: { color: '#86efac', bg: 'rgba(34, 197, 94, 0.12)', border: 'rgba(34, 197, 94, 0.2)' },
+          Rejected: { color: '#fca5a5', bg: 'rgba(248, 113, 113, 0.12)', border: 'rgba(248, 113, 113, 0.2)' },
+        }
+      : {
+          Pending: { color: '#175cd3', bg: '#eff8ff', border: '#b2ddff' },
+          'In-Process': { color: '#6941c6', bg: '#f9f5ff', border: '#e9d7fe' },
+          Accepted: { color: '#027a48', bg: '#ecfdf3', border: '#abefc6' },
+          Rejected: { color: '#b42318', bg: '#fef3f2', border: '#fecdca' },
+        };
+    const tone = palette[candidate.application_status] || palette.Pending;
+
+    return (
+      <span
+        className="text-xs font-medium px-2.5 py-1 rounded-full border"
+        style={{ color: tone.color, backgroundColor: tone.bg, borderColor: tone.border }}
+      >
+        Applied • {candidate.application_status}
+        {candidate.recruitment_stage ? ` • ${candidate.recruitment_stage}` : ''}
+      </span>
+    );
+  };
+
   const panelStyle = {
     backgroundColor: darkMode ? 'rgba(24, 34, 51, 0.92)' : 'rgba(255, 255, 255, 0.88)',
     border: darkMode ? '1px solid rgba(71, 85, 105, 0.38)' : '1px solid rgba(255, 255, 255, 0.72)',
@@ -193,6 +316,7 @@ const CandidateMatchingPage: React.FC = () => {
                 value={selectedJobId}
                 onChange={(e) => {
                   setSelectedJobId(e.target.value);
+                  setScope('all');
                   setResult(null);
                   setStatusMsg('');
                   setError('');
@@ -336,14 +460,58 @@ const CandidateMatchingPage: React.FC = () => {
               </p>
             </div>
 
+            <div className="flex flex-wrap gap-2 mb-4" role="tablist" aria-label="Candidate scope">
+              {SCOPE_TABS.map((tab) => {
+                const active = tab.id === scope;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => handleScopeChange(tab.id)}
+                    disabled={loading}
+                    className="inline-flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-2xl transition-colors disabled:opacity-60"
+                    style={
+                      active
+                        ? { background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)', color: '#1f2937' }
+                        : {
+                            backgroundColor: darkMode ? 'rgba(30, 41, 59, 0.9)' : 'rgba(248, 250, 252, 0.96)',
+                            color: 'var(--text-secondary)',
+                            border: darkMode ? '1px solid rgba(71, 85, 105, 0.38)' : '1px solid rgba(226, 232, 240, 0.9)',
+                          }
+                    }
+                  >
+                    {tab.label}
+                    <span
+                      className="text-xs px-2 py-0.5 rounded-full"
+                      style={{
+                        backgroundColor: active
+                          ? 'rgba(31, 41, 55, 0.12)'
+                          : darkMode
+                            ? 'rgba(71, 85, 105, 0.4)'
+                            : 'rgba(226, 232, 240, 0.9)',
+                      }}
+                    >
+                      {result.counts[tab.id]}
+                    </span>
+                  </button>
+                );
+              })}
+              {loading && (
+                <Loader2 size={16} className="animate-spin self-center" style={{ color: 'var(--text-muted)' }} />
+              )}
+            </div>
+
             {result.ranked_candidates.length === 0 ? (
               <div className="text-center py-12" style={{ color: 'var(--text-muted)' }}>
-                No candidates meet the minimum score threshold.
+                {EMPTY_MESSAGES[scope]}
               </div>
             ) : (
               <div className="flex flex-col gap-3">
                 {result.ranked_candidates.map((candidate: RankedCandidate, index: number) => {
                   const expanded = expandedIds.has(candidate.user_id);
+                  const action = shortlistAction(candidate);
 
                   return (
                     <div key={candidate.user_id} className="rounded-[24px] p-5" style={panelStyle}>
@@ -368,6 +536,7 @@ const CandidateMatchingPage: React.FC = () => {
                                 Resume
                               </span>
                             )}
+                            {statusBadge(candidate)}
                           </div>
 
                           <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
@@ -411,6 +580,8 @@ const CandidateMatchingPage: React.FC = () => {
                               </button>
                             )}
                           </div>
+
+                          {action && <div className="flex flex-wrap gap-2 mt-3">{action}</div>}
                         </div>
 
                         <div className="flex-shrink-0 w-52 mt-1">

@@ -71,15 +71,15 @@ const Sidebar: React.FC<SidebarProps> = ({ onLogout }) => {
     <aside className="app-shell-sidebar w-72 min-h-screen flex-col hidden md:flex">
       <div className="px-5 py-5 border-b" style={{ borderColor: 'var(--border)' }}>
         <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-2.5 min-w-0">
             <img
-              src="/branding/nu-logo.png"
+              src="/branding/nu-logo-mark.png"
               alt="National University"
-              className="h-10 w-auto flex-shrink-0"
+              className="h-14 w-auto flex-shrink-0"
             />
             <div className="min-w-0">
               <p
-                className="text-[11px] uppercase tracking-[0.22em] font-semibold"
+                className="text-[11px] uppercase tracking-[0.16em] font-semibold whitespace-nowrap truncate"
                 style={{ color: 'var(--text-muted)' }}
               >
                 HR Operations
@@ -92,15 +92,16 @@ const Sidebar: React.FC<SidebarProps> = ({ onLogout }) => {
               </h1>
             </div>
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
+          {/* Stacked so the enlarged logo and label keep their width in w-72 */}
+          <div className="flex flex-col items-center gap-1 flex-shrink-0">
             {user && <NotificationBell />}
             <button
               type="button"
               onClick={toggleTheme}
-              className="sidebar-theme-toggle h-10 w-10 rounded-xl flex items-center justify-center transition-colors"
+              className="sidebar-theme-toggle h-8 w-8 rounded-lg flex items-center justify-center transition-colors"
               title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
             >
-              {darkMode ? <Sun size={17} strokeWidth={1.8} /> : <Moon size={17} strokeWidth={1.8} />}
+              {darkMode ? <Sun size={15} strokeWidth={1.8} /> : <Moon size={15} strokeWidth={1.8} />}
             </button>
           </div>
         </div>
