@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import NotificationBell from './NotificationBell';
 
 interface SidebarProps {
   onLogout: () => void;
@@ -91,14 +92,18 @@ const Sidebar: React.FC<SidebarProps> = ({ onLogout }) => {
               </h1>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={toggleTheme}
-            className="sidebar-theme-toggle h-10 w-10 flex-shrink-0 rounded-xl flex items-center justify-center transition-colors"
-            title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-          >
-            {darkMode ? <Sun size={17} strokeWidth={1.8} /> : <Moon size={17} strokeWidth={1.8} />}
-          </button>
+          {/* Stacked so the enlarged logo and label keep their width in w-72 */}
+          <div className="flex flex-col items-center gap-1 flex-shrink-0">
+            {user && <NotificationBell />}
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="sidebar-theme-toggle h-8 w-8 rounded-lg flex items-center justify-center transition-colors"
+              title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            >
+              {darkMode ? <Sun size={15} strokeWidth={1.8} /> : <Moon size={15} strokeWidth={1.8} />}
+            </button>
+          </div>
         </div>
       </div>
 
