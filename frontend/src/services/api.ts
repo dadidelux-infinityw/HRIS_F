@@ -409,6 +409,28 @@ export interface HiringFunnelResponse {
   conversion_rates: Record<string, number>;
 }
 
+export type NotificationType =
+  | 'application_submitted'
+  | 'status_changed'
+  | 'stage_changed'
+  | 'interview_scheduled'
+  | 'interview_updated'
+  | 'interview_cancelled';
+
+export interface AppNotification {
+  id: string;
+  type: NotificationType | string;
+  title: string;
+  message: string;
+  link: string | null;
+  is_read: boolean;
+  created_at: string;
+}
+
+export interface UnreadCountResponse {
+  count: number;
+}
+
 class ApiService {
   private baseUrl: string;
 
@@ -914,6 +936,38 @@ class ApiService {
   async deleteUser(userId: string): Promise<void> {
     const response = await fetch(`${this.baseUrl}/users/${userId}`, {
       method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse(response);
+  }
+
+  // Notification methods
+  async getNotifications(limit = 20, unreadOnly = false): Promise<AppNotification[]> {
+    const params = new URLSearchParams({ limit: String(limit), unread_only: String(unreadOnly) });
+    const response = await fetch(`${this.baseUrl}/notifications/?${params.toString()}`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse(response);
+  }
+
+  async getUnreadNotificationCount(): Promise<UnreadCountResponse> {
+    const response = await fetch(`${this.baseUrl}/notifications/unread-count`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse(response);
+  }
+
+  async markNotificationRead(id: string): Promise<AppNotification> {
+    const response = await fetch(`${this.baseUrl}/notifications/${id}/read`, {
+      method: 'PATCH',
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse(response);
+  }
+
+  async markAllNotificationsRead(): Promise<{ updated: number }> {
+    const response = await fetch(`${this.baseUrl}/notifications/read-all`, {
+      method: 'POST',
       headers: this.getAuthHeaders(),
     });
     return this.handleResponse(response);
