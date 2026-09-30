@@ -17,8 +17,32 @@ from app.schemas.interview import (
     InterviewUpdate
 )
 from app.core.dependencies import get_current_user
+from app.models.notification import NotificationType
+from app.services.notifications import notify
 
 router = APIRouter()
+
+
+def _notify_candidate(db, application, current_user, type, title, message):
+    """Notify the applicant about an interview change made by someone else."""
+    if not application or application.user_id == current_user.id:
+        return
+    notify(
+        db,
+        user_id=application.user_id,
+        type=type,
+        title=title,
+        message=message,
+        link="/my-interviews",
+    )
+
+
+def _interview_label(interview, application):
+    job_title = application.job_posting.job_title if application and application.job_posting else "the role"
+    return (
+        f"{job_title} on {interview.interview_date.strftime('%b %d, %Y')} "
+        f"at {interview.interview_time.strftime('%I:%M %p')}"
+    )
 
 
 @router.get("/", response_model=List[InterviewResponse])
@@ -159,6 +183,12 @@ def create_interview(
     )
 
     db.add(new_interview)
+    _notify_candidate(
+        db, application, current_user,
+        NotificationType.INTERVIEW_SCHEDULED,
+        "Interview scheduled",
+        f"Your interview for {_interview_label(new_interview, application)} has been scheduled.",
+    )
     db.commit()
     db.refresh(new_interview)
 
@@ -185,6 +215,10 @@ def update_interview(
             detail="Interview not found"
         )
 
+    old_date = interview.interview_date
+    old_time = interview.interview_time
+    old_status = interview.status
+
     # Update fields
     update_data = interview_data.model_dump(exclude_unset=True)
     for field, value in update_data.items():
@@ -206,6 +240,34 @@ def update_interview(
                 )
 
         setattr(interview, field, value)
+
+    application = interview.application
+    label = _interview_label(interview, application)
+    if interview.status != old_status and interview.status == InterviewStatus.CANCELLED:
+        _notify_candidate(
+            db, application, current_user,
+            NotificationType.INTERVIEW_CANCELLED,
+            "Interview cancelled",
+            f"Your interview for {label} has been cancelled.",
+        )
+    elif interview.status != old_status and interview.status == InterviewStatus.COMPLETED:
+        _notify_candidate(
+            db, application, current_user,
+            NotificationType.INTERVIEW_UPDATED,
+            "Interview completed",
+            f"Your interview for {label} has been marked as completed.",
+        )
+    elif (
+        interview.interview_date != old_date
+        or interview.interview_time != old_time
+        or (interview.status != old_status and interview.status == InterviewStatus.RESCHEDULED)
+    ):
+        _notify_candidate(
+            db, application, current_user,
+            NotificationType.INTERVIEW_UPDATED,
+            "Interview rescheduled",
+            f"Your interview has been rescheduled to {label}.",
+        )
 
     db.commit()
     db.refresh(interview)
@@ -233,7 +295,15 @@ def delete_interview(
         )
 
     # Mark as cancelled instead of deleting
+    already_cancelled = interview.status == InterviewStatus.CANCELLED
     interview.status = InterviewStatus.CANCELLED
+    if not already_cancelled:
+        _notify_candidate(
+            db, interview.application, current_user,
+            NotificationType.INTERVIEW_CANCELLED,
+            "Interview cancelled",
+            f"Your interview for {_interview_label(interview, interview.application)} has been cancelled.",
+        )
     db.commit()
 
     return {"message": "Interview cancelled successfully"}

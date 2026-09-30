@@ -8,7 +8,7 @@ from sqlalchemy import inspect, text
 from app.core.config import settings
 from app.api.v1.api import api_router
 from app.db.database import engine
-from app.models import JobPosting, User, Profile, Application, Interview
+from app.models import JobPosting, User, Profile, Application, Interview, Notification
 from app.models.user import PasswordResetToken
 
 logger = logging.getLogger(__name__)
@@ -20,6 +20,7 @@ Profile.metadata.create_all(bind=engine)
 Application.metadata.create_all(bind=engine)
 Interview.metadata.create_all(bind=engine)
 PasswordResetToken.metadata.create_all(bind=engine)
+Notification.metadata.create_all(bind=engine)
 
 # Ensure columns added after initial schema exist (create_all only creates
 # new tables, it does not add columns to existing ones).
