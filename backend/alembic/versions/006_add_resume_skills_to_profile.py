@@ -15,6 +15,10 @@ depends_on = None
 
 
 def upgrade() -> None:
+    # app/main.py may already have added this column at startup
+    columns = {c['name'] for c in sa.inspect(op.get_bind()).get_columns('profiles')}
+    if 'resume_skills' in columns:
+        return
     op.add_column(
         'profiles',
         sa.Column('resume_skills', sa.JSON(), nullable=False, server_default='[]')

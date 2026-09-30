@@ -15,14 +15,18 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column(
-        'users',
-        sa.Column('notify_email', sa.Boolean(), nullable=False, server_default=sa.true())
-    )
-    op.add_column(
-        'users',
-        sa.Column('notify_in_app', sa.Boolean(), nullable=False, server_default=sa.true())
-    )
+    # app/main.py may already have added these columns at startup
+    columns = {c['name'] for c in sa.inspect(op.get_bind()).get_columns('users')}
+    if 'notify_email' not in columns:
+        op.add_column(
+            'users',
+            sa.Column('notify_email', sa.Boolean(), nullable=False, server_default=sa.true())
+        )
+    if 'notify_in_app' not in columns:
+        op.add_column(
+            'users',
+            sa.Column('notify_in_app', sa.Boolean(), nullable=False, server_default=sa.true())
+        )
 
 
 def downgrade() -> None:

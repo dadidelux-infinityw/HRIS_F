@@ -16,6 +16,17 @@ depends_on = None
 
 
 def upgrade() -> None:
+    # app/main.py create_all may already have created the table at startup;
+    # in that case only add any missing indexes
+    inspector = sa.inspect(op.get_bind())
+    if inspector.has_table('notifications'):
+        existing = {ix['name'] for ix in inspector.get_indexes('notifications')}
+        if 'ix_notifications_user_id' not in existing:
+            op.create_index('ix_notifications_user_id', 'notifications', ['user_id'])
+        if 'ix_notifications_created_at' not in existing:
+            op.create_index('ix_notifications_created_at', 'notifications', ['created_at'])
+        return
+
     op.create_table(
         'notifications',
         sa.Column('id', postgresql.UUID(as_uuid=True), primary_key=True),
