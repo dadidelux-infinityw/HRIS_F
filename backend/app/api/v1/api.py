@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import job_postings, auth, users, dashboard, profile, applications, interviews, matching
+from app.api.v1.endpoints import job_postings, auth, users, dashboard, profile, applications, interviews, matching, notifications
 
 api_router = APIRouter()
 
@@ -57,4 +57,11 @@ api_router.include_router(
     matching.router,
     prefix="/matching",
     tags=["matching"]
+)
+
+# Notification routes
+api_router.include_router(
+    notifications.router,
+    prefix="/notifications",
+    tags=["notifications"]
 )

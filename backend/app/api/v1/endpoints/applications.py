@@ -16,8 +16,25 @@ from app.schemas.application import (
     ApplicationUpdate
 )
 from app.core.dependencies import get_current_user
+from app.models.notification import NotificationType
+from app.services.notifications import notify
 
 router = APIRouter()
+
+
+def _notify_candidate_of_change(db, application, current_user, type, title, change):
+    """Notify the applicant about a change made by someone else (HR/Admin)."""
+    if application.user_id == current_user.id:
+        return
+    job_title = application.job_posting.job_title if application.job_posting else "the role"
+    notify(
+        db,
+        user_id=application.user_id,
+        type=type,
+        title=title,
+        message=f"Your application for {job_title}: {change}.",
+        link="/my-applications",
+    )
 
 
 @router.get("/", response_model=List[ApplicationResponse])
@@ -156,6 +173,14 @@ def create_application(
     )
 
     db.add(new_application)
+    notify(
+        db,
+        user_id=current_user.id,
+        type=NotificationType.APPLICATION_SUBMITTED,
+        title="Application received",
+        message=f"Your application for {job_posting.job_title} has been received.",
+        link="/my-applications",
+    )
     db.commit()
     db.refresh(new_application)
 
@@ -224,6 +249,12 @@ def update_application(
             }
             application.status = new_status
             application.timeline = (application.timeline or []) + [new_entry]
+            _notify_candidate_of_change(
+                db, application, current_user,
+                NotificationType.STATUS_CHANGED,
+                "Application status updated",
+                f"status changed to {new_status.value}",
+            )
         except ValueError:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -237,6 +268,13 @@ def update_application(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Invalid recruitment stage. Valid values: {sorted(valid_stages)}"
+            )
+        if application_data.recruitment_stage != application.recruitment_stage:
+            _notify_candidate_of_change(
+                db, application, current_user,
+                NotificationType.STAGE_CHANGED,
+                "Recruitment stage updated",
+                f"moved to the {application_data.recruitment_stage} stage",
             )
         application.recruitment_stage = application_data.recruitment_stage
 
